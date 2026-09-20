@@ -1,0 +1,20 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+const bool = (value, fallback) => (value === undefined || value === '' ? fallback : value !== 'false');
+
+export const config = {
+  port: Number.parseInt(process.env.PORT ?? '3000', 10),
+  // Nombre de reverse proxies devant l'app (nécessaire pour l'IP réelle du client).
+  trustProxy: Number.parseInt(process.env.TRUST_PROXY ?? '1', 10),
+  staticDir: process.env.STATIC_DIR ?? path.resolve(here, '../public'),
+  recipient: process.env.RECIPIENT_EMAIL ?? 'apprentissage@esisar.grenoble-inp.fr',
+  smtp: {
+    host: process.env.SMTP_HOST ?? 'smtps.esisar.grenoble-inp.fr',
+    port: Number.parseInt(process.env.SMTP_PORT ?? '587', 10),
+    rejectUnauthorized: bool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true)
+  },
+  maxFileSize: 10 * 1024 * 1024
+};

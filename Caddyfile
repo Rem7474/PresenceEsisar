@@ -1,0 +1,13 @@
+# HTTPS automatique : certificat Let's Encrypt pour un vrai nom de domaine,
+# certificat auto-signé (CA interne Caddy) pour localhost, une IP ou un nom local.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	request_body {
+		max_size 12MB
+	}
+
+	header -Server
+
+	reverse_proxy app:3000
+}

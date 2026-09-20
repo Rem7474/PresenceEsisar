@@ -1,32 +1,17 @@
 {
   "name": "Attestation Présence Esisar",
   "short_name": "Présence Esisar",
-  "description": "Application de gestion des feuilles de présence",
+  "description": "Envoi de la feuille de présence hebdomadaire",
+  "lang": "fr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
-  "scope": "/",
-  "icons": [
-    {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    }
-  ],
+  "theme_color": "#2563eb",
   "categories": ["education"],
-  "screenshots": [
-    {
-      "src": "/screenshot.png",
-      "sizes": "540x720",
-      "type": "image/png"
-    }
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

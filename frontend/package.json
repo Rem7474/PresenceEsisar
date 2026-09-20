@@ -1,20 +1,23 @@
 {
-  "name": "presence-esisar-pwa",
-  "version": "1.0.0",
-  "description": "PWA for attendance sheet management - Esisar",
+  "name": "presence-esisar-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "PWA d'envoi des attestations de présence - Esisar",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .js,.vue"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
-    "vue": "^3.3.0"
+    "vue": "^3.5.43"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.5.0",
-    "vite": "^5.0.0",
-    "eslint": "^8.54.0"
+    "@vitejs/plugin-vue": "^6.0.9",
+    "vite": "^8.3.0"
   }
 }

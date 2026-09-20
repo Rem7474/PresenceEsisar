@@ -5,62 +5,44 @@
     </header>
 
     <main class="app-content">
-      <LoginView v-if="!isAuthenticated" @login="handleLogin" />
-      <DashboardView v-else @logout="handleLogout" :user="currentUser" />
+      <template v-if="ready">
+        <LoginView v-if="!user" @login="handleLogin" />
+        <DashboardView v-else :user="user" @logout="handleLogout" />
+      </template>
     </main>
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue';
+<script setup>
+import { onMounted, ref } from 'vue';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
+import { canPersist, clearCredentials, loadCredentials, saveCredentials } from './lib/credentials';
 
-export default {
-  components: {
-    LoginView,
-    DashboardView
-  },
-  setup() {
-    const isAuthenticated = ref(false);
-    const currentUser = ref(null);
+const user = ref(null);
+const ready = ref(false);
 
-    onMounted(() => {
-      const storedUser = localStorage.getItem('presenceUser');
-      if (storedUser) {
-        try {
-          currentUser.value = JSON.parse(storedUser);
-          isAuthenticated.value = true;
-        } catch (e) {
-          console.error('Failed to parse stored user:', e);
-        }
-      }
-    });
-
-    const handleLogin = (userData) => {
-      currentUser.value = userData;
-      isAuthenticated.value = true;
-      // Simple obfuscation for password storage (not production-grade encryption)
-      const obfuscatedData = {
-        ...userData,
-        password: btoa(userData.password)
-      };
-      localStorage.setItem('presenceUser', JSON.stringify(obfuscatedData));
-    };
-
-    const handleLogout = () => {
-      localStorage.removeItem('presenceUser');
-      currentUser.value = null;
-      isAuthenticated.value = false;
-    };
-
-    return {
-      isAuthenticated,
-      currentUser,
-      handleLogin,
-      handleLogout
-    };
+onMounted(async () => {
+  try {
+    user.value = await loadCredentials();
+  } finally {
+    ready.value = true;
   }
+});
+
+const handleLogin = async (credentials) => {
+  user.value = credentials;
+  if (!canPersist()) return;
+  try {
+    await saveCredentials(credentials);
+  } catch (error) {
+    console.error('Mémorisation des identifiants impossible:', error);
+  }
+};
+
+const handleLogout = async () => {
+  user.value = null;
+  await clearCredentials();
 };
 </script>
 

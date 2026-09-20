@@ -7,9 +7,11 @@
           <label for="name">Nom Complet</label>
           <input
             id="name"
-            v-model="form.name"
+            v-model.trim="form.name"
             type="text"
             placeholder="Ex: Jean Dupont"
+            autocomplete="name"
+            maxlength="100"
             required
           >
         </div>
@@ -18,9 +20,11 @@
           <label for="email">Identifiant / E-mail</label>
           <input
             id="email"
-            v-model="form.email"
+            v-model.trim="form.email"
             type="email"
             placeholder="Ex: jean.dupont@esisar.grenoble-inp.fr"
+            autocomplete="username"
+            maxlength="254"
             required
           >
         </div>
@@ -32,9 +36,11 @@
             v-model="form.password"
             type="password"
             placeholder="Mot de passe pour l'authentification SMTP"
+            autocomplete="current-password"
+            maxlength="256"
             required
           >
-          <small>⚠️ Nécessaire pour envoyer les emails via le serveur SMTP</small>
+          <small>Nécessaire pour envoyer les e-mails via le serveur SMTP de l'école. Il est chiffré et mémorisé uniquement sur cet appareil.</small>
         </div>
 
         <button type="submit" class="btn-primary">Continuer</button>
@@ -43,32 +49,16 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { reactive } from 'vue';
 
-export default {
-  emits: ['login'],
-  setup(props, { emit }) {
-    const form = reactive({
-      name: '',
-      email: '',
-      password: ''
-    });
+const emit = defineEmits(['login']);
 
-    const handleSubmit = () => {
-      if (form.name && form.email && form.password) {
-        emit('login', { ...form });
-        form.name = '';
-        form.email = '';
-        form.password = '';
-      }
-    };
+const form = reactive({ name: '', email: '', password: '' });
 
-    return {
-      form,
-      handleSubmit
-    };
-  }
+const handleSubmit = () => {
+  emit('login', { ...form });
+  Object.assign(form, { name: '', email: '', password: '' });
 };
 </script>
 

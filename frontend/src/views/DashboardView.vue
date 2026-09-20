@@ -4,7 +4,7 @@
       <div class="user-info">
         <span>Bienvenue, <strong>{{ user.name }}</strong></span>
       </div>
-      <button @click="$emit('logout')" class="btn-logout">Déconnexion</button>
+      <button class="btn-logout" @click="$emit('logout')">Déconnexion</button>
     </div>
 
     <div class="dashboard-content">
@@ -13,14 +13,14 @@
           <h2>Télécharger Votre Feuille de Présence</h2>
 
           <div class="week-info">
-            <p>Semaine actuelle: <strong>{{ currentWeek }}</strong></p>
+            <p>Semaine actuelle: <strong>{{ week }}</strong></p>
           </div>
 
           <div class="upload-actions">
-            <button @click="openPhotoCamera" class="btn-camera" :disabled="isLoading">
+            <button class="btn-camera" :disabled="isLoading" @click="cameraInput.click()">
               📷 Prendre une Photo
             </button>
-            <button @click="openFileSelector" class="btn-file" :disabled="isLoading">
+            <button class="btn-file" :disabled="isLoading" @click="fileInput.click()">
               📁 Sélectionner un Fichier
             </button>
             <input
@@ -28,21 +28,21 @@
               type="file"
               accept="image/*"
               capture="environment"
-              style="display: none"
+              hidden
               @change="handleFileSelect"
             >
             <input
               ref="fileInput"
               type="file"
-              accept="image/*,.pdf"
-              style="display: none"
+              :accept="ACCEPTED_TYPES.join(',')"
+              hidden
               @change="handleFileSelect"
             >
           </div>
 
           <div v-if="selectedFile" class="file-preview">
             <p>Fichier sélectionné: <strong>{{ selectedFile.name }}</strong></p>
-            <img v-if="previewUrl && isImageFile" :src="previewUrl" alt="Preview" class="preview-image">
+            <img v-if="previewUrl" :src="previewUrl" alt="Aperçu" class="preview-image">
           </div>
 
           <div class="filename-display">
@@ -52,15 +52,11 @@
             </div>
           </div>
 
-          <button
-            @click="handleSubmit"
-            class="btn-submit"
-            :disabled="!selectedFile || isLoading"
-          >
+          <button class="btn-submit" :disabled="!selectedFile || isLoading" @click="handleSubmit">
             {{ isLoading ? 'Envoi en cours...' : '✉️ Envoyer' }}
           </button>
 
-          <div v-if="message" :class="['message', messageType]">
+          <div v-if="message" :class="['message', messageType]" role="status">
             {{ message }}
           </div>
         </div>
@@ -69,137 +65,101 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, onMounted } from 'vue';
+<script setup>
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { isoWeek } from '../lib/week';
+import { ACCEPTED_TYPES, MAX_FILE_SIZE, buildFilename } from '../lib/filename';
 
-export default {
-  props: {
-    user: {
-      type: Object,
-      required: true
+const props = defineProps({
+  user: { type: Object, required: true }
+});
+defineEmits(['logout']);
+
+const cameraInput = ref(null);
+const fileInput = ref(null);
+const selectedFile = ref(null);
+const previewUrl = ref(null);
+const isLoading = ref(false);
+const message = ref('');
+const messageType = ref('');
+
+const week = isoWeek();
+let messageTimer;
+
+const generatedFilename = computed(() =>
+  selectedFile.value
+    ? buildFilename(props.user.name, week, selectedFile.value.type)
+    : 'Attestation présence P2027- [ NOM ] - Esisar- Semaine [ Numero ]'
+);
+
+const showMessage = (text, type) => {
+  message.value = text;
+  messageType.value = type;
+  clearTimeout(messageTimer);
+  messageTimer = setTimeout(() => (message.value = ''), 5000);
+};
+
+const resetSelection = () => {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  selectedFile.value = null;
+  previewUrl.value = null;
+  cameraInput.value.value = '';
+  fileInput.value.value = '';
+};
+
+const handleFileSelect = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    resetSelection();
+    return showMessage('Format non supporté : utilisez une image JPEG, PNG, WebP ou un PDF.', 'error');
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    resetSelection();
+    return showMessage('Fichier trop volumineux (10 Mo maximum).', 'error');
+  }
+
+  resetSelection();
+  selectedFile.value = file;
+  previewUrl.value = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+};
+
+const handleSubmit = async () => {
+  if (!selectedFile.value) return;
+
+  isLoading.value = true;
+  message.value = '';
+
+  try {
+    const body = new FormData();
+    body.append('file', selectedFile.value);
+    body.append('name', props.user.name);
+    body.append('email', props.user.email);
+    body.append('password', props.user.password);
+    body.append('week', String(week));
+
+    const response = await fetch('/api/upload', { method: 'POST', body });
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok) {
+      showMessage('Fichier envoyé avec succès !', 'success');
+      resetSelection();
+    } else {
+      showMessage(result.error || "Erreur lors de l'envoi.", 'error');
     }
-  },
-  emits: ['logout'],
-  setup(props) {
-    const fileInput = ref(null);
-    const selectedFile = ref(null);
-    const previewUrl = ref(null);
-    const isLoading = ref(false);
-    const message = ref('');
-    const messageType = ref('');
-    const currentWeek = ref(0);
-
-    const isImageFile = computed(() => {
-      if (!selectedFile.value) return false;
-      return selectedFile.value.type.startsWith('image/');
-    });
-
-    const generatedFilename = computed(() => {
-      if (!selectedFile.value) {
-        return 'Attestation présence P2027- [ NOM ] - Esisar- Semaine [ Numero ]';
-      }
-      const ext = selectedFile.value.type.startsWith('image/') ? 'jpg' : 'pdf';
-      return `Attestation présence P2027- ${props.user.name} - Esisar- Semaine ${currentWeek.value}.${ext}`;
-    });
-
-    const getWeekNumber = () => {
-      const now = new Date();
-      const start = new Date(now.getFullYear(), 0, 1);
-      const diff = now - start;
-      const oneDay = 86400000;
-      const day = Math.floor(diff / oneDay);
-      const week = Math.ceil((day + start.getDay() + 1) / 7);
-      return week;
-    };
-
-    onMounted(() => {
-      currentWeek.value = getWeekNumber();
-    });
-
-    const openPhotoCamera = () => {
-      cameraInput.value.click();
-    };
-
-    const openFileSelector = () => {
-      fileInput.value.click();
-    };
-
-    const handleFileSelect = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        selectedFile.value = file;
-        if (isImageFile.value) {
-          previewUrl.value = URL.createObjectURL(file);
-        }
-      }
-    };
-
-    const handleSubmit = async () => {
-      if (!selectedFile.value) return;
-
-      isLoading.value = true;
-      message.value = '';
-      messageType.value = '';
-
-      try {
-        const formData = new FormData();
-        formData.append('file', selectedFile.value);
-        formData.append('user', JSON.stringify({
-          name: props.user.name,
-          email: props.user.email,
-          password: props.user.password,
-          week: currentWeek.value
-        }));
-
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          showMessage('Fichier envoyé avec succès!', 'success');
-          selectedFile.value = null;
-          previewUrl.value = null;
-          fileInput.value.value = '';
-        } else {
-          showMessage(result.error || 'Erreur lors de l\'envoi', 'error');
-        }
-      } catch (err) {
-        showMessage('Erreur réseau ou serveur', 'error');
-        console.error('Upload error:', err);
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    const showMessage = (text, type) => {
-      message.value = text;
-      messageType.value = type;
-      setTimeout(() => {
-        message.value = '';
-      }, 5000);
-    };
-
-    return {
-      cameraInput,
-      fileInput,
-      selectedFile,
-      previewUrl,
-      isLoading,
-      message,
-      messageType,
-      currentWeek,
-      isImageFile,
-      generatedFilename,
-      openPhotoCamera,
-      openFileSelector,
-      handleFileSelect,
-      handleSubmit
-    };
+  } catch (error) {
+    console.error('Erreur réseau:', error);
+    showMessage('Erreur réseau ou serveur.', 'error');
+  } finally {
+    isLoading.value = false;
   }
 };
+
+onBeforeUnmount(() => {
+  clearTimeout(messageTimer);
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+});
 </script>
 
 <style scoped>
