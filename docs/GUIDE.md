@@ -178,8 +178,15 @@ L'email sera maintenant envoyé à `votre.email.test@gmail.com` au lieu de `appr
 
 ```bash
 # À la racine du projet
+# Copier et éditer le fichier .env
+cp backend/.env.example backend/.env
+# Éditer backend/.env avec vos configurations
+
+# Démarrer les services
 docker-compose up -d
 ```
+
+**Important:** Docker Compose lit automatiquement `backend/.env` grâce à la directive `env_file` du docker-compose.yml. Assurez-vous que ce fichier existe et contient vos variables avant de lancer les conteneurs.
 
 **Vérifier que tout fonctionne:**
 ```bash

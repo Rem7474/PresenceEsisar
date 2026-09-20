@@ -8,13 +8,11 @@ services:
     container_name: presence-backend
     ports:
       - "3000:3000"
+    env_file:
+      - ./backend/.env
     environment:
       - NODE_ENV=production
-      - PORT=3000
-      - FRONTEND_URL=http://localhost
     restart: unless-stopped
-    volumes:
-      - ./backend/.env:/app/.env:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
