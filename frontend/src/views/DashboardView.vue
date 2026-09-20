@@ -17,12 +17,20 @@
           </div>
 
           <div class="upload-actions">
-            <button @click="openCamera" class="btn-camera" :disabled="isLoading">
+            <button @click="openPhotoCamera" class="btn-camera" :disabled="isLoading">
               📷 Prendre une Photo
             </button>
             <button @click="openFileSelector" class="btn-file" :disabled="isLoading">
               📁 Sélectionner un Fichier
             </button>
+            <input
+              ref="cameraInput"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style="display: none"
+              @change="handleFileSelect"
+            >
             <input
               ref="fileInput"
               type="file"
@@ -108,32 +116,8 @@ export default {
       currentWeek.value = getWeekNumber();
     });
 
-    const openCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        const video = document.createElement('video');
-        video.srcObject = stream;
-        video.play();
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        setTimeout(() => {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          stream.getTracks().forEach(track => track.stop());
-
-          canvas.toBlob(blob => {
-            const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            selectedFile.value = file;
-            previewUrl.value = URL.createObjectURL(blob);
-          });
-        }, 500);
-      } catch (err) {
-        showMessage('Erreur d\'accès à la caméra', 'error');
-        console.error('Camera error:', err);
-      }
+    const openPhotoCamera = () => {
+      cameraInput.value.click();
     };
 
     const openFileSelector = () => {
@@ -199,6 +183,7 @@ export default {
     };
 
     return {
+      cameraInput,
       fileInput,
       selectedFile,
       previewUrl,
@@ -208,7 +193,7 @@ export default {
       currentWeek,
       isImageFile,
       generatedFilename,
-      openCamera,
+      openPhotoCamera,
       openFileSelector,
       handleFileSelect,
       handleSubmit
