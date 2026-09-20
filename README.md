@@ -154,7 +154,7 @@ MIT - Libre d'utilisation
 ## 👨‍💻 Développeur
 
 Créé pour la promotion d'alternants Esisar  
-2024-2025
+2026-2027
 
 ---
 
