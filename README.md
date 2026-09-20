@@ -60,13 +60,17 @@ cd frontend && npm install && npm run dev
 
 Accéder à `http://localhost:5173`
 
-### Production avec Docker
+### Production avec Docker (Recommandé)
 
 ```bash
+# Configurer
+cp backend/.env.example backend/.env
+
+# Lancer (frontend + backend dans le container)
 docker-compose up -d
 ```
 
-Accéder à `http://localhost`
+Accéder à `http://localhost:3000`
 
 **Voir le [Guide Complet](docs/GUIDE.md) pour les détails.**
 

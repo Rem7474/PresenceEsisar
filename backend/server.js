@@ -31,7 +31,11 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+const frontendPath = process.env.NODE_ENV === 'production'
+  ? path.join(__dirname, './dist')
+  : path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendPath));
 
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
@@ -76,7 +80,10 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  const indexPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, './dist/index.html')
+    : path.join(__dirname, '../frontend/dist/index.html');
+  res.sendFile(indexPath);
 });
 
 app.listen(PORT, () => {

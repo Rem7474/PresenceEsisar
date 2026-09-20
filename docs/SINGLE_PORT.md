@@ -64,40 +64,36 @@ Ouvrir le navigateur: **http://localhost:3000**
 
 ---
 
-## 🐳 Docker (Single Port)
+## 🐳 Docker (Single Port) - RECOMMANDÉ
 
-### docker-compose.yml
+Le Dockerfile utilise un **multi-stage build** qui :
+1. ✅ Build le frontend dans le container
+2. ✅ Build le backend dans le container
+3. ✅ Copie le frontend compilé vers le backend
+4. ✅ Sert tout sur un seul port
 
-Le `docker-compose.yml` est déjà configuré pour cela :
-
-```yaml
-services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./backend/.env
-```
-
-### Déployer avec Docker
+### Déployer avec Docker (Plus Simple !)
 
 ```bash
-# 1. Build frontend
-cd frontend && npm install && npm run build && cd ..
-
-# 2. Configurer backend/.env
+# 1. Configurer backend/.env
 cp backend/.env.example backend/.env
-# Éditer backend/.env
+# Éditer backend/.env avec vos paramètres
 
-# 3. Lancer avec Docker
+# 2. Lancer Docker Compose (build + démarrage automatique)
 docker-compose up -d
 
-# 4. Accéder à l'application
+# 3. C'est tout ! Accéder à l'application
 # http://localhost:3000
 ```
+
+### Pourquoi c'est mieux ?
+
+| Approche | Setup | Commandes | Complexité |
+|----------|-------|-----------|-----------|
+| Host npm | 4 étapes | `npm build`, `npm start`, `docker-compose` | ❌ Complexe |
+| Docker multi-stage | 2 étapes | `cp .env.example`, `docker-compose up` | ✅ Simple |
+
+**Aucun build npm nécessaire sur l'host !**
 
 ---
 
