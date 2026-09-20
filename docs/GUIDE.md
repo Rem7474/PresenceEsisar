@@ -79,10 +79,18 @@ cd ..
 ```bash
 cd frontend
 npm install
+cp .env.example .env
 cd ..
 ```
 
-### 4. Configuration
+### 4. Configuration Frontend & Backend
+
+Éditer `frontend/.env`:
+```bash
+# Port et backend API
+VITE_PORT=5173
+VITE_BACKEND_URL=http://localhost:3000
+```
 
 Éditer `backend/.env`:
 ```bash
@@ -95,7 +103,14 @@ NODE_ENV=development
 RECIPIENT_EMAIL=apprentissage@esisar.grenoble-inp.fr
 ```
 
-**Variables disponibles:**
+**Variables Frontend:**
+
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `VITE_PORT` | `5173` | Port du serveur Vite (dev) |
+| `VITE_BACKEND_URL` | `http://localhost:3000` | URL du backend pour proxy API |
+
+**Variables Backend:**
 
 | Variable | Défaut | Description |
 |----------|--------|-------------|

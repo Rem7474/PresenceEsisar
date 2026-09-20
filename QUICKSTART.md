@@ -8,22 +8,29 @@
 # Backend
 cd backend
 npm install
+cp .env.example .env  # Créer le fichier .env
 cd ..
 
 # Frontend
 cd frontend
 npm install
+cp .env.example .env  # Créer le fichier .env
 cd ..
 ```
 
-### Étape 2: Configurer le Backend (optionnel)
+### Étape 2: Configurer Backend & Frontend (optionnel)
 
-Éditer `backend/.env` pour personnaliser:
-
+**Backend** - Éditer `backend/.env`:
 ```bash
 PORT=3000                                           # Port du serveur
 FRONTEND_URL=http://localhost:5173                 # URL du frontend
 RECIPIENT_EMAIL=apprentissage@esisar.grenoble-inp.fr  # Email destinataire
+```
+
+**Frontend** - Éditer `frontend/.env`:
+```bash
+VITE_PORT=5173                                      # Port Vite dev server
+VITE_BACKEND_URL=http://localhost:3000              # URL du backend
 ```
 
 ### Étape 3: Démarrer le Backend (Terminal 1)
