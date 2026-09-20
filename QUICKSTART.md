@@ -16,7 +16,17 @@ npm install
 cd ..
 ```
 
-### Étape 2: Démarrer le Backend (Terminal 1)
+### Étape 2: Configurer le Backend (optionnel)
+
+Éditer `backend/.env` pour personnaliser:
+
+```bash
+PORT=3000                                           # Port du serveur
+FRONTEND_URL=http://localhost:5173                 # URL du frontend
+RECIPIENT_EMAIL=apprentissage@esisar.grenoble-inp.fr  # Email destinataire
+```
+
+### Étape 3: Démarrer le Backend (Terminal 1)
 
 ```bash
 cd backend
@@ -28,7 +38,7 @@ npm run dev
 Server running on http://localhost:3000
 ```
 
-### Étape 3: Démarrer le Frontend (Terminal 2)
+### Étape 4: Démarrer le Frontend (Terminal 2)
 
 ```bash
 cd frontend
@@ -41,7 +51,7 @@ VITE v5.0.0 ready in XXX ms
 ➜  Local:   http://localhost:5173/
 ```
 
-### Étape 4: Accéder à l'application
+### Étape 5: Accéder à l'application
 
 Ouvrir dans le navigateur: **http://localhost:5173**
 

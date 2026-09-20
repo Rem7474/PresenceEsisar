@@ -10,7 +10,7 @@ const SMTP_CONFIG = {
   }
 };
 
-const RECIPIENT_EMAIL = 'apprentissage@esisar.grenoble-inp.fr';
+const RECIPIENT_EMAIL = process.env.RECIPIENT_EMAIL || 'apprentissage@esisar.grenoble-inp.fr';
 
 const decodePassword = (encodedPassword) => {
   try {

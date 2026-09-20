@@ -86,10 +86,23 @@ cd ..
 
 Éditer `backend/.env`:
 ```bash
+# Serveur
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
+
+# Email (optionnel - valeurs par défaut si non défini)
+RECIPIENT_EMAIL=apprentissage@esisar.grenoble-inp.fr
 ```
+
+**Variables disponibles:**
+
+| Variable | Défaut | Description |
+|----------|--------|-------------|
+| `PORT` | `3000` | Port d'écoute du serveur |
+| `FRONTEND_URL` | `http://localhost:5173` | URL du frontend (pour CORS) |
+| `NODE_ENV` | `development` | Environnement (development/production) |
+| `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Email destinataire pour les envois |
 
 ---
 
@@ -137,9 +150,23 @@ npm run dev
 - Observer le message de confirmation
 
 #### 5. **Vérification de l'Email**
-- L'email doit arriver à `apprentissage@esisar.grenoble-inp.fr`
+- L'email doit arriver à l'adresse configurée dans `.env` (par défaut: `apprentissage@esisar.grenoble-inp.fr`)
 - Pièce jointe: Fichier renommé au format spécifié
 - Objet: `Attestation de Présence - [nom du fichier]`
+
+#### 🧪 Test avec un email différent
+
+Pour tester avant de passer en production:
+
+```bash
+# Éditer backend/.env
+RECIPIENT_EMAIL=votre.email.test@gmail.com
+
+# Redémarrer le backend
+npm run dev
+```
+
+L'email sera maintenant envoyé à `votre.email.test@gmail.com` au lieu de `apprentissage@esisar.grenoble-inp.fr`
 
 ---
 
