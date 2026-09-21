@@ -228,13 +228,24 @@ const handleExternalMail = async () => {
 
   const subject = buildSubject(generatedFilename.value);
   const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
-  // Le partage natif n'a pas de champ « À » : le destinataire est donc rappelé dans le texte.
-  const shareData = { files: [file], title: subject, text: `${buildBody(subject)}\n\nDestinataire : ${props.recipient}` };
+  const shareData = { files: [file], title: subject, text: buildBody(subject) };
 
   if (navigator.canShare?.(shareData)) {
+    // Le partage natif n'a pas de champ « À » : l'adresse est copiée pour être collée dans l'app mail.
+    // La copie est lancée dans le même geste que le partage (sans attente) pour rester autorisée.
+    const copied =
+      props.recipient && navigator.clipboard
+        ? navigator.clipboard.writeText(props.recipient).then(() => true, () => false)
+        : Promise.resolve(false);
     try {
       await navigator.share(shareData);
-      return showMessage(`Partage effectué. Destinataire de l'attestation : ${props.recipient}`, 'success');
+      if (!props.recipient) return showMessage('Partage effectué.', 'success');
+      return showMessage(
+        (await copied)
+          ? 'Partage effectué. Adresse du destinataire copiée dans le presse-papiers.'
+          : `Partage effectué. Destinataire : ${props.recipient}`,
+        'success'
+      );
     } catch (error) {
       if (error.name === 'AbortError') return;
       console.error('Partage impossible, repli sur mailto:', error);
