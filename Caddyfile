@@ -1,6 +1,10 @@
 # Le HTTPS public est assuré par le reverse proxy en amont (nginx) ; ce Caddy n'expose
 # qu'un HTTPS interne, avec un certificat auto-signé généré à la volée (CA interne Caddy).
 {
+	# Le certificat n'a pas à être ajouté au magasin de confiance du conteneur (lecture seule).
+	skip_install_trust
+	auto_https disable_redirects
+
 	servers {
 		# Conserve l'IP client transmise par le reverse proxy (X-Forwarded-For).
 		trusted_proxies static private_ranges
