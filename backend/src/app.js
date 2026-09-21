@@ -50,6 +50,11 @@ export const createApp = ({ sendPresenceEmail = defaultSend } = {}) => {
     res.set('Cache-Control', 'no-store').json({ status: 'ok' });
   });
 
+  // Utilisé par le frontend pour l'envoi via une application e-mail externe.
+  app.get('/api/config', (_req, res) => {
+    res.set('Cache-Control', 'no-store').json({ recipient: config.recipient });
+  });
+
   app.post('/api/upload', failedAttempts, upload.single('file'), async (req, res, next) => {
     try {
       const { name, email, password, week: rawWeek } = req.body;

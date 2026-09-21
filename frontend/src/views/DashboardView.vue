@@ -56,6 +56,10 @@
             {{ isLoading ? 'Envoi en cours...' : '✉️ Envoyer' }}
           </button>
 
+          <button class="btn-external" :disabled="!selectedFile || isLoading" @click="handleExternalMail">
+            📤 Envoyer avec mon application e-mail
+          </button>
+
           <div v-if="message" :class="['message', messageType]" role="status">
             {{ message }}
           </div>
@@ -66,9 +70,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { isoWeek } from '../lib/week';
 import { ACCEPTED_TYPES, MAX_FILE_SIZE, buildFilename } from '../lib/filename';
+import { MAIL_BODY, buildMailto, buildSubject } from '../lib/mail';
 
 const props = defineProps({
   user: { type: Object, required: true }
@@ -84,6 +89,7 @@ const message = ref('');
 const messageType = ref('');
 
 const week = isoWeek();
+const recipient = ref('');
 let messageTimer;
 
 const generatedFilename = computed(() =>
@@ -154,6 +160,49 @@ const handleSubmit = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+onMounted(async () => {
+  try {
+    recipient.value = (await (await fetch('/api/config')).json()).recipient ?? '';
+  } catch (error) {
+    console.error('Destinataire indisponible:', error);
+  }
+});
+
+const downloadFile = (file) => {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+};
+
+// Sans SMTP : partage natif du fichier (mobile), sinon téléchargement + mailto: (bureau).
+// Le partage doit être déclenché directement par le clic, sans attente préalable.
+const handleExternalMail = async () => {
+  if (!selectedFile.value) return;
+
+  const subject = buildSubject(generatedFilename.value);
+  const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
+  const shareData = { files: [file], title: subject, text: `${MAIL_BODY}\n\nDestinataire : ${recipient.value}` };
+
+  if (navigator.canShare?.(shareData)) {
+    try {
+      await navigator.share(shareData);
+      return showMessage(`Partage effectué. Destinataire de l'attestation : ${recipient.value}`, 'success');
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      console.error('Partage impossible, repli sur mailto:', error);
+    }
+  }
+
+  downloadFile(file);
+  window.location.href = buildMailto(recipient.value, subject, MAIL_BODY);
+  showMessage('Fichier téléchargé : joignez-le au mail qui vient de s\'ouvrir.', 'success');
 };
 
 onBeforeUnmount(() => {
@@ -333,6 +382,29 @@ onBeforeUnmount(() => {
 }
 
 .btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-external {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  color: #2563eb;
+  border: 2px solid #2563eb;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-external:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.btn-external:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

@@ -65,3 +65,10 @@ test('health, 404 API et en-têtes de sécurité', async () => {
     assert.equal((await fetch(`${url}/api/inconnue`)).status, 404);
   });
 });
+
+test('expose le destinataire configuré', async () => {
+  await withServer(async () => {}, async (url) => {
+    const body = await (await fetch(`${url}/api/config`)).json();
+    assert.equal(body.recipient, 'apprentissage@esisar.grenoble-inp.fr');
+  });
+});
