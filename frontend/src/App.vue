@@ -5,6 +5,7 @@
     </header>
 
     <main class="app-content">
+      <InstallBanner />
       <template v-if="ready">
         <LoginView v-if="!user" @login="handleLogin" />
         <DashboardView v-else :user="user" @logout="handleLogout" />
@@ -17,6 +18,7 @@
 import { onMounted, ref } from 'vue';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
+import InstallBanner from './components/InstallBanner.vue';
 import { canPersist, clearCredentials, loadCredentials, saveCredentials } from './lib/credentials';
 
 const user = ref(null);
