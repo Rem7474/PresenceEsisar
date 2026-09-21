@@ -228,7 +228,8 @@ const handleExternalMail = async () => {
 
   const subject = buildSubject(generatedFilename.value);
   const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
-  const shareData = { files: [file], title: subject, text: buildBody(subject) };
+  // Le partage natif n'a pas de champ « À » : le destinataire est donc rappelé dans le texte.
+  const shareData = { files: [file], title: subject, text: `${buildBody(subject)}\n\nDestinataire : ${props.recipient}` };
 
   if (navigator.canShare?.(shareData)) {
     try {
