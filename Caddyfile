@@ -1,6 +1,17 @@
-# HTTPS automatique : certificat Let's Encrypt pour un vrai nom de domaine,
-# certificat auto-signé (CA interne Caddy) pour localhost, une IP ou un nom local.
-{$DOMAIN:localhost} {
+# Le HTTPS public est assuré par le reverse proxy en amont (nginx) ; ce Caddy n'expose
+# qu'un HTTPS interne, avec un certificat auto-signé généré à la volée (CA interne Caddy).
+{
+	servers {
+		# Conserve l'IP client transmise par le reverse proxy (X-Forwarded-For).
+		trusted_proxies static private_ranges
+	}
+}
+
+https://:443 {
+	tls internal {
+		on_demand
+	}
+
 	encode zstd gzip
 
 	request_body {

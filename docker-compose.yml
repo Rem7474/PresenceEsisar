@@ -10,6 +10,8 @@ services:
       SMTP_HOST: ${SMTP_HOST:-smtps.esisar.grenoble-inp.fr}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_TLS_REJECT_UNAUTHORIZED: ${SMTP_TLS_REJECT_UNAUTHORIZED:-true}
+      # Proxys devant l'app : nginx puis Caddy
+      TRUST_PROXY: 2
     read_only: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
@@ -23,11 +25,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      DOMAIN: ${DOMAIN:-localhost}
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

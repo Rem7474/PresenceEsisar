@@ -21,6 +21,8 @@ export const createApp = ({ sendPresenceEmail = defaultSend } = {}) => {
 
   app.use(
     helmet({
+      // Le HTTPS public (et donc HSTS) est géré par le reverse proxy en amont.
+      strictTransportSecurity: false,
       contentSecurityPolicy: {
         directives: {
           'default-src': ["'self'"],

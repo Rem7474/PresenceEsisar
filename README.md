@@ -12,16 +12,28 @@ Le fichier joint est nommé `Attestation présence P2027- [NOM] - Esisar- Semain
 docker compose up -d --build
 ```
 
-L'application est servie en HTTPS sur <https://localhost> (certificat auto-signé : à accepter une fois dans le
-navigateur). Aucune configuration n'est obligatoire.
+La stack expose un unique port HTTPS avec un certificat **auto-signé** (`127.0.0.1:8443` par défaut). Le HTTPS
+public (certificat de confiance, HSTS, nom de domaine) est assuré par le reverse proxy nginx en amont, qui ne doit
+pas vérifier ce certificat interne :
 
-Pour un déploiement sur un vrai domaine, copier `.env.example` en `.env` et renseigner `DOMAIN` : Caddy obtient
-et renouvelle automatiquement un certificat Let's Encrypt (ports 80 et 443 accessibles depuis Internet).
-Une PWA n'est installable que sous HTTPS avec un certificat de confiance.
+```nginx
+location / {
+    proxy_pass https://127.0.0.1:8443;
+    proxy_ssl_verify off;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 12m;   # les photos dépassent la limite par défaut de nginx (1 Mo)
+}
+```
+
+Une PWA n'est installable que sous HTTPS avec un certificat de confiance : c'est le rôle de nginx.
+Configuration facultative via `.env` (voir `.env.example`, chaque variable a une valeur par défaut) :
 
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
-| `DOMAIN` | `localhost` | Nom de domaine servi par Caddy |
+| `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
+| `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
 | `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
 | `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `587` | Serveur SMTP (STARTTLS obligatoire) |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
@@ -31,10 +43,11 @@ Mise à jour : `git pull && docker compose up -d --build`. Logs : `docker compos
 ## Architecture
 
 ```
-navigateur ──HTTPS──> caddy (80/443) ──HTTP──> app (Node, port interne 3000) ──STARTTLS──> SMTP école
+navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> caddy ──HTTP──> app (Node) ──STARTTLS──> SMTP école
 ```
 
-- `caddy` : reverse proxy, TLS automatique, compression, limite de taille des requêtes (12 Mo). Seul service exposé.
+- `caddy` : HTTPS interne auto-signé, compression, limite de taille des requêtes (12 Mo). Seul service publié.
+  Il conserve l'en-tête `X-Forwarded-For` de nginx pour que la limitation de tentatives porte sur l'IP réelle.
 - `app` : image unique (build multi-étapes) contenant l'API Express 5 et la PWA Vue 3 compilée par Vite.
   Non exposée, utilisateur non-root, système de fichiers en lecture seule, toutes les capabilities retirées.
 
@@ -52,7 +65,7 @@ Dockerfile, docker-compose.yml, Caddyfile, .env.example
 - **SMTP** : STARTTLS obligatoire, certificat du serveur vérifié.
 - **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de
   fichier assaini, limitation des tentatives échouées (20 / 15 min / IP) contre le brute-force d'identifiants.
-- **Web** : CSP stricte, HSTS, en-têtes Helmet, aucune source de script ou de style inline.
+- **Web** : CSP stricte, en-têtes Helmet (HSTS laissé à nginx), aucune source de script ou de style inline.
 
 ## API
 
