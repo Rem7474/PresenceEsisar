@@ -3,14 +3,14 @@
 FROM node:24-alpine AS frontend-build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 
 FROM node:24-alpine AS backend-deps
 WORKDIR /app
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 FROM node:24-alpine
 ENV NODE_ENV=production

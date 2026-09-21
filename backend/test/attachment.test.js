@@ -33,6 +33,9 @@ test('buildFilename respecte le format exigé', () => {
 test('validation e-mail et semaine', () => {
   assert.ok(isValidEmail('jean.dupont@esisar.grenoble-inp.fr'));
   assert.ok(!isValidEmail('jean@x'));
+  assert.ok(!isValidEmail('@esisar.fr') && !isValidEmail('jean@') && !isValidEmail('a@@b.fr'));
+  assert.ok(!isValidEmail('jean@esisar..fr') && !isValidEmail('jean@.fr') && !isValidEmail('jean@esisar.'));
+  assert.ok(!isValidEmail(undefined) && !isValidEmail(`${'a'.repeat(250)}@b.fr`));
   assert.ok(!isValidEmail('a@b.fr\r\nBcc: c@d.fr'));
   assert.ok(isValidWeek(1) && isValidWeek(53));
   assert.ok(!isValidWeek(0) && !isValidWeek(54) && !isValidWeek(1.5) && !isValidWeek(NaN));

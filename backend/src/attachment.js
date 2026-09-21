@@ -35,10 +35,17 @@ export const sanitizeName = (name) =>
 
 export const isValidWeek = (week) => Number.isInteger(week) && week >= 1 && week <= 53;
 
-export const isValidEmail = (email) =>
-  typeof email === 'string' &&
-  email.length <= 254 &&
-  /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]+$/.test(email);
+const EMAIL_FORBIDDEN_CHARS = /[\s<>()",;:]/;
+
+/** Validation volontairement simple (sans regex à backtracking) : le SMTP reste juge de l'adresse. */
+export const isValidEmail = (email) => {
+  if (typeof email !== 'string' || email.length > 254 || EMAIL_FORBIDDEN_CHARS.test(email)) return false;
+  const parts = email.split('@');
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  const labels = domain.split('.');
+  return local.length > 0 && labels.length >= 2 && labels.every((label) => label.length > 0);
+};
 
 export const buildFilename = (name, week, ext) =>
   `Attestation présence P2027- ${sanitizeName(name)} - Esisar- Semaine ${week}.${ext}`;
