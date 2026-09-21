@@ -14,7 +14,7 @@ const upload = multer({
 
 const isBoundedString = (value, max) => typeof value === 'string' && value.length > 0 && value.length <= max;
 
-export const createApp = ({ sendPresenceEmail = defaultSend } = {}) => {
+export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = config.smtp.enabled } = {}) => {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
@@ -52,10 +52,13 @@ export const createApp = ({ sendPresenceEmail = defaultSend } = {}) => {
 
   // Utilisé par le frontend pour l'envoi via une application e-mail externe.
   app.get('/api/config', (_req, res) => {
-    res.set('Cache-Control', 'no-store').json({ recipient: config.recipient });
+    res.set('Cache-Control', 'no-store').json({ recipient: config.recipient, smtpEnabled });
   });
 
-  app.post('/api/upload', failedAttempts, upload.single('file'), async (req, res, next) => {
+  const requireSmtp = (_req, res, next) =>
+    smtpEnabled ? next() : res.status(403).json({ error: "L'envoi direct est désactivé." });
+
+  app.post('/api/upload', requireSmtp, failedAttempts, upload.single('file'), async (req, res, next) => {
     try {
       const { name, email, password, week: rawWeek } = req.body;
       const week = Number(rawWeek);

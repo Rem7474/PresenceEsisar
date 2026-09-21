@@ -14,6 +14,8 @@ export const config = {
   staticDir: process.env.STATIC_DIR ?? path.resolve(here, '../public'),
   recipient: process.env.RECIPIENT_EMAIL ?? 'apprentissage@esisar.grenoble-inp.fr',
   smtp: {
+    // false : l'envoi direct est désactivé, seul l'envoi via une application e-mail externe reste proposé.
+    enabled: bool(process.env.SMTP_ENABLED, true),
     host: process.env.SMTP_HOST ?? 'smtps.esisar.grenoble-inp.fr',
     port: smtpPort,
     // 465 : SSL/TLS dès la connexion ; autres ports (587) : STARTTLS obligatoire.

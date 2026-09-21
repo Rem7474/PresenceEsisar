@@ -5,8 +5,8 @@ import { MailError } from '../src/mailer.js';
 
 const PDF = Buffer.from('%PDF-1.7 contenu de test');
 
-const withServer = async (sendPresenceEmail, run) => {
-  const server = createApp({ sendPresenceEmail }).listen(0);
+const withServer = async (sendPresenceEmail, run, options = {}) => {
+  const server = createApp({ sendPresenceEmail, ...options }).listen(0);
   await new Promise((resolve) => server.once('listening', resolve));
   try {
     await run(`http://127.0.0.1:${server.address().port}`);
@@ -70,5 +70,24 @@ test('expose le destinataire configuré', async () => {
   await withServer(async () => {}, async (url) => {
     const body = await (await fetch(`${url}/api/config`)).json();
     assert.equal(body.recipient, 'apprentissage@esisar.grenoble-inp.fr');
+  });
+});
+
+test('SMTP désactivé : /api/upload refusé et indiqué dans /api/config', async () => {
+  let called = false;
+  await withServer(
+    async () => { called = true; },
+    async (url) => {
+      assert.equal((await fetch(`${url}/api/upload`, { method: 'POST', body: form() })).status, 403);
+      assert.equal((await (await fetch(`${url}/api/config`)).json()).smtpEnabled, false);
+    },
+    { smtpEnabled: false }
+  );
+  assert.equal(called, false);
+});
+
+test('SMTP activé par défaut', async () => {
+  await withServer(async () => {}, async (url) => {
+    assert.equal((await (await fetch(`${url}/api/config`)).json()).smtpEnabled, true);
   });
 });

@@ -35,6 +35,7 @@ Configuration facultative via `.env` (voir `.env.example`, chaque variable a une
 | `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
 | `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
 | `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
+| `SMTP_ENABLED` | `true` | `false` désactive l'envoi SMTP : seuls le nom est demandé et l'envoi via l'application e-mail est proposé |
 | `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP : 465 = SSL/TLS, autre port (587) = STARTTLS |
 | `SMTP_SECURE` | déduit du port | `true` (SSL/TLS) ou `false` (STARTTLS) pour forcer le mode |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
