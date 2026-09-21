@@ -35,7 +35,8 @@ Configuration facultative via `.env` (voir `.env.example`, chaque variable a une
 | `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
 | `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
 | `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
-| `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP (SSL/TLS) |
+| `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP : 465 = SSL/TLS, autre port (587) = STARTTLS |
+| `SMTP_SECURE` | déduit du port | `true` (SSL/TLS) ou `false` (STARTTLS) pour forcer le mode |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
 
 Mise à jour : `git pull && docker compose up -d --build`. Logs : `docker compose logs -f`.
@@ -62,7 +63,7 @@ Dockerfile, docker-compose.yml, Caddyfile, .env.example
 - **Identifiants** : saisis une seule fois, le mot de passe est chiffré en AES-GCM dans le navigateur ; la clé,
   non exportable, est stockée dans IndexedDB. Le serveur reçoit le mot de passe en HTTPS pour la durée de
   l'envoi uniquement : il n'est ni stocké ni journalisé.
-- **SMTP** : SSL/TLS (port 465), certificat du serveur vérifié.
+- **SMTP** : SSL/TLS (port 465) ou STARTTLS obligatoire (587), certificat du serveur vérifié.
 - **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de
   fichier assaini, limitation des tentatives échouées (20 / 15 min / IP) contre le brute-force d'identifiants.
 - **Web** : CSP stricte, en-têtes Helmet (HSTS laissé à nginx), aucune source de script ou de style inline.

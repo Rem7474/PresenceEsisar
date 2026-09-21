@@ -5,6 +5,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 const bool = (value, fallback) => (value === undefined || value === '' ? fallback : value !== 'false');
 
+const smtpPort = Number.parseInt(process.env.SMTP_PORT ?? '465', 10);
+
 export const config = {
   port: Number.parseInt(process.env.PORT ?? '3000', 10),
   // Nombre de reverse proxies devant l'app (nécessaire pour l'IP réelle du client).
@@ -13,7 +15,9 @@ export const config = {
   recipient: process.env.RECIPIENT_EMAIL ?? 'apprentissage@esisar.grenoble-inp.fr',
   smtp: {
     host: process.env.SMTP_HOST ?? 'smtps.esisar.grenoble-inp.fr',
-    port: Number.parseInt(process.env.SMTP_PORT ?? '465', 10),
+    port: smtpPort,
+    // 465 : SSL/TLS dès la connexion ; autres ports (587) : STARTTLS obligatoire.
+    secure: bool(process.env.SMTP_SECURE, smtpPort === 465),
     rejectUnauthorized: bool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true)
   },
   maxFileSize: 10 * 1024 * 1024
