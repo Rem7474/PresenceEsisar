@@ -13,7 +13,7 @@ export const config = {
   recipient: process.env.RECIPIENT_EMAIL ?? 'apprentissage@esisar.grenoble-inp.fr',
   smtp: {
     host: process.env.SMTP_HOST ?? 'smtps.esisar.grenoble-inp.fr',
-    port: Number.parseInt(process.env.SMTP_PORT ?? '587', 10),
+    port: Number.parseInt(process.env.SMTP_PORT ?? '465', 10),
     rejectUnauthorized: bool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true)
   },
   maxFileSize: 10 * 1024 * 1024

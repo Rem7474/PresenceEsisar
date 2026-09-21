@@ -11,15 +11,14 @@ export class MailError extends Error {
 const UNREACHABLE_CODES = ['ECONNECTION', 'ETIMEDOUT', 'ESOCKET', 'EDNS', 'EHOSTUNREACH'];
 
 /**
- * Envoie l'attestation via le SMTP de l'école (STARTTLS), en s'authentifiant
+ * Envoie l'attestation via le SMTP de l'école (SSL/TLS), en s'authentifiant
  * avec les identifiants de l'étudiant. Le mot de passe n'est ni journalisé ni conservé.
  */
 export const sendPresenceEmail = async ({ email, password, filename, content }) => {
   const transporter = nodemailer.createTransport({
     host: config.smtp.host,
     port: config.smtp.port,
-    secure: false,
-    requireTLS: true,
+    secure: true,
     tls: { rejectUnauthorized: config.smtp.rejectUnauthorized },
     auth: { user: email, pass: password },
     connectionTimeout: 15_000,
