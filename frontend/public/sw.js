@@ -1,55 +1,38 @@
-const CACHE_NAME = 'presence-esisar-v1';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
+// Service worker minimal : rend l'app installable et utilisable hors ligne (coquille uniquement).
+// L'envoi d'une attestation nécessite toujours le réseau.
+const CACHE_NAME = 'presence-esisar-v2';
 
-self.addEventListener('install', event => {
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add('/')).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
-    })
+    caches
+      .keys()
+      .then((names) => Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
-
-self.addEventListener('fetch', event => {
+self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(
-          JSON.stringify({ error: 'Network error' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        );
-      })
-    );
+  const cacheResponse = (response) => {
+    if (response.ok) {
+      const copy = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request.mode === 'navigate' ? '/' : request, copy));
+    }
+    return response;
+  };
+
+  if (request.mode === 'navigate') {
+    // Réseau d'abord pour toujours récupérer la dernière version, cache en secours hors ligne.
+    event.respondWith(fetch(request).then(cacheResponse).catch(() => caches.match('/')));
   } else {
-    event.respondWith(
-      caches.match(request).then(response => {
-        return response || fetch(request).then(fetchResponse => {
-          return caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, fetchResponse.clone());
-            return fetchResponse;
-          });
-        });
-      })
-    );
+    // Assets hachés par Vite : le cache est sûr et plus rapide.
+    event.respondWith(caches.match(request).then((cached) => cached ?? fetch(request).then(cacheResponse)));
   }
 });

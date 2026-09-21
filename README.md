@@ -1,166 +1,89 @@
 # Attestation Présence Esisar
 
-Une **Progressive Web App (PWA)** moderne pour automatiser l'envoi des feuilles de présence hebdomadaires des alternants.
+PWA permettant à un étudiant de photographier (ou importer) sa feuille de présence hebdomadaire et de l'envoyer
+par e-mail au service apprentissage, via le SMTP de l'école.
 
-## 🎯 Fonctionnalités
+Le fichier joint est nommé `Attestation présence P2027- [NOM] - Esisar- Semaine [N].[ext]`
+(semaine ISO 8601, extension déduite du contenu réel du fichier).
 
-✅ **Interface PWA installable** - Fonctionne en mode offline  
-✅ **Prise de photo** - Caméra directement depuis le smartphone  
-✅ **Sélection de fichier** - Upload d'images ou PDF  
-✅ **Calcul automatique de semaine** - Détecte la semaine actuelle  
-✅ **Envoi par email** - Via le serveur SMTP Esisar  
-✅ **Stockage persistant** - Sauvegarde des identifiants (localStorage)  
-✅ **Design responsive** - Fonctionne sur tous les appareils  
-
-## 📁 Structure du Projet
-
-```
-PresenceEsisar/
-├── frontend/              # PWA Vue 3 + Vite
-│   ├── src/
-│   │   ├── main.js
-│   │   ├── App.vue
-│   │   └── views/
-│   │       ├── LoginView.vue
-│   │       └── DashboardView.vue
-│   ├── public/
-│   │   ├── manifest.json
-│   │   └── sw.js
-│   ├── package.json
-│   ├── vite.config.js
-│   └── index.html
-│
-├── backend/               # Express.js API
-│   ├── services/
-│   │   └── emailService.js
-│   ├── server.js
-│   ├── Dockerfile
-│   ├── package.json
-│   └── .env.example
-│
-├── docs/                  # Documentation
-│   ├── GUIDE.md          # Guide complet d'installation
-│   └── nginx.conf        # Configuration du reverse proxy
-│
-├── docker-compose.yml    # Stack Docker
-└── README.md            # Ce fichier
-```
-
-## ⚡ Démarrage Rapide
-
-### Développement Local
+## Démarrage
 
 ```bash
-# Terminal 1 - Backend
-cd backend && npm install && npm run dev
-
-# Terminal 2 - Frontend
-cd frontend && npm install && npm run dev
+docker compose up -d --build
 ```
 
-Accéder à `http://localhost:5173`
+La stack expose un unique port HTTPS avec un certificat **auto-signé** (`127.0.0.1:8443` par défaut). Le HTTPS
+public (certificat de confiance, HSTS, nom de domaine) est assuré par le reverse proxy nginx en amont, qui ne doit
+pas vérifier ce certificat interne :
 
-### Production avec Docker (Recommandé)
+```nginx
+location / {
+    proxy_pass https://127.0.0.1:8443;
+    proxy_ssl_verify off;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    client_max_body_size 12m;   # les photos dépassent la limite par défaut de nginx (1 Mo)
+}
+```
+
+Une PWA n'est installable que sous HTTPS avec un certificat de confiance : c'est le rôle de nginx.
+Configuration facultative via `.env` (voir `.env.example`, chaque variable a une valeur par défaut) :
+
+| Variable | Défaut | Rôle |
+| --- | --- | --- |
+| `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
+| `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
+| `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
+| `SMTP_ENABLED` | `true` | `false` désactive l'envoi SMTP : seuls le nom est demandé et l'envoi via l'application e-mail est proposé |
+| `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP : 465 = SSL/TLS, autre port (587) = STARTTLS |
+| `SMTP_SECURE` | déduit du port | `true` (SSL/TLS) ou `false` (STARTTLS) pour forcer le mode |
+| `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
+
+Mise à jour : `git pull && docker compose up -d --build`. Logs : `docker compose logs -f`.
+
+## Architecture
+
+```
+navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> caddy ──HTTP──> app (Node) ──SSL/TLS──> SMTP école
+```
+
+- `caddy` : HTTPS interne auto-signé, compression, limite de taille des requêtes (12 Mo). Seul service publié.
+  Il conserve l'en-tête `X-Forwarded-For` de nginx pour que la limitation de tentatives porte sur l'IP réelle.
+- `app` : image unique (build multi-étapes) contenant l'API Express 5 et la PWA Vue 3 compilée par Vite.
+  Non exposée, utilisateur non-root, système de fichiers en lecture seule, toutes les capabilities retirées.
+
+```
+backend/    API Express (server.js, src/app.js, mailer.js, attachment.js) + tests
+frontend/   PWA Vue 3 / Vite (src/, public/ : manifest, service worker, icônes) + tests
+Dockerfile, docker-compose.yml, Caddyfile, .env.example
+```
+
+## Sécurité
+
+- **Identifiants** : saisis une seule fois, le mot de passe est chiffré en AES-GCM dans le navigateur ; la clé,
+  non exportable, est stockée dans IndexedDB. Le serveur reçoit le mot de passe en HTTPS pour la durée de
+  l'envoi uniquement : il n'est ni stocké ni journalisé.
+- **SMTP** : SSL/TLS (port 465) ou STARTTLS obligatoire (587), certificat du serveur vérifié.
+- **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de
+  fichier assaini, limitation des tentatives échouées (20 / 15 min / IP) contre le brute-force d'identifiants.
+- **Web** : CSP stricte, en-têtes Helmet (HSTS laissé à nginx), aucune source de script ou de style inline.
+
+## API
+
+`POST /api/upload` (`multipart/form-data`) : `file`, `name`, `email`, `password`, `week`.
+Réponses : `200 {success:true}`, `400` requête invalide, `401` authentification SMTP refusée, `413` fichier
+trop gros, `429` trop de tentatives, `502` SMTP injoignable ou envoi refusé.
+`GET /api/health` : `{status:"ok"}`.
+
+## Développement local
+
+Node.js >= 22.12.
 
 ```bash
-# Configurer
-cp backend/.env.example backend/.env
-
-# Lancer (frontend + backend dans le container)
-docker-compose up -d
+cd backend  && npm ci && npm start     # API sur :3000
+cd frontend && npm ci && npm run dev   # Vite sur :5173, proxy /api -> :3000
+npm test                               # dans backend/ et dans frontend/
 ```
 
-Accéder à `http://localhost:3000`
-
-**Voir le [Guide Complet](docs/GUIDE.md) pour les détails.**
-
-## 🔧 Stack Technique
-
-### Frontend
-- **Vue 3** - Framework progressif
-- **Vite** - Build tool ultra-rapide
-- **Service Worker** - Support offline
-- **LocalStorage** - Persistance des données
-
-### Backend
-- **Node.js 20+** - Runtime JavaScript
-- **Express.js** - Framework web minimaliste
-- **Nodemailer** - Client SMTP
-- **Multer** - Gestion des uploads
-
-### Infrastructure
-- **Docker & Docker Compose** - Conteneurisation
-- **Nginx** - Reverse proxy
-- **SMTP Esisar** - Service d'envoi email
-
-## 📋 Cahier des Charges
-
-L'application respecte strictement le cahier des charges:
-
-1. ✅ Enregistrement des identifiants (Nom, Email, Mot de passe)
-2. ✅ Prise de photo / Upload de fichier
-3. ✅ Calcul automatique du numéro de semaine
-4. ✅ Affichage du nom de fichier généré
-5. ✅ Envoi par email à `apprentissage@esisar.grenoble-inp.fr`
-6. ✅ Format de nom: `Attestation présence P2027- [NOM] - Esisar- Semaine [N]`
-7. ✅ Reverse proxy compatible (Nginx)
-
-## 🔐 Sécurité
-
-- **Obfuscation des passwords** (localStorage)
-- **Validation des fichiers** (type MIME + taille)
-- **STARTTLS SMTP** (Port 587)
-- **CORS configuré** pour le domaine frontend
-- **Escape HTML** pour prévenir les injections
-
-## 📱 Compatibilité
-
-| Navigateur | Support |
-|-----------|---------|
-| Chrome    | ✅ Complet |
-| Firefox   | ✅ Complet |
-| Safari    | ✅ Complet |
-| Edge      | ✅ Complet |
-
-Installation PWA: Disponible sur iOS, Android, Chrome desktop
-
-## 🚀 Déploiement
-
-3 options disponibles:
-
-1. **Docker Compose** (Recommandé)
-2. **Linux natif** avec systemd + Nginx
-3. **Heroku/Vercel** (avec adaptations)
-
-Voir le [Guide d'Installation](docs/GUIDE.md) pour les instructions détaillées.
-
-## 📞 Troubleshooting
-
-### Email ne s'envoie pas
-- Vérifier les credentials SMTP
-- Vérifier la connectivité vers `smtps.esisar.grenoble-inp.fr:587`
-- Vérifier les logs du backend
-
-### PWA ne s'installe pas
-- HTTPS obligatoire en production
-- Vérifier `manifest.json` et service worker
-
-### Fichier trop volumineux
-- Taille max: **10 MB**
-- Compresser l'image avant upload
-
-Voir le [Guide Complet](docs/GUIDE.md#-troubleshooting) pour plus de solutions.
-
-## 📄 License
-
-MIT - Libre d'utilisation
-
-## 👨‍💻 Développeur
-
-Créé pour la promotion d'alternants Esisar  
-2026-2027
-
----
-
-**Besoin d'aide?** → Consultez le [Guide Complet](docs/GUIDE.md)  
-**Signaler un bug?** → Ouvrez une issue sur GitHub
+Le service worker n'est actif que dans le build de production.

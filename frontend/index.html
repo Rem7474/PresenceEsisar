@@ -2,39 +2,20 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#3b82f6">
-  <meta name="description" content="Application de gestion des feuilles de présence Esisar">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f5fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0f1f" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Présence">
+  <meta name="description" content="Envoi de la feuille de présence hebdomadaire - Esisar">
   <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/favicon.ico">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <title>Attestation Présence Esisar</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-      background: #f5f5f5;
-      color: #333;
-    }
-
-    #app {
-      min-height: 100vh;
-    }
-  </style>
 </head>
 <body>
   <div id="app"></div>
   <script type="module" src="/src/main.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker registered'))
-        .catch(err => console.log('SW registration failed:', err));
-    }
-  </script>
 </body>
 </html>

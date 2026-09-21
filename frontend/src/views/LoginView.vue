@@ -1,154 +1,198 @@
 <template>
   <div class="login-container">
-    <div class="login-card">
-      <h2>Première Connexion</h2>
-      <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="name">Nom Complet</label>
-          <input
-            id="name"
-            v-model="form.name"
-            type="text"
-            placeholder="Ex: Jean Dupont"
-            required
-          >
-        </div>
+    <div class="brand">
+      <img class="logo" src="/icon.svg" alt="">
+      <h1>Présence Esisar</h1>
+      <p>Envoyez votre feuille de présence en quelques secondes.</p>
+    </div>
 
-        <div class="form-group">
-          <label for="email">Identifiant / E-mail</label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            placeholder="Ex: jean.dupont@esisar.grenoble-inp.fr"
-            required
-          >
-        </div>
+    <form class="card login-card" @submit.prevent="handleSubmit">
+      <h2>{{ smtpEnabled ? 'Première connexion' : 'Votre nom' }}</h2>
 
-        <div class="form-group">
-          <label for="password">Mot de passe (SMTP)</label>
+      <div class="field">
+        <label for="name">Nom complet</label>
+        <input
+          id="name"
+          v-model.trim="form.name"
+          type="text"
+          placeholder="Jean Dupont"
+          autocomplete="name"
+          maxlength="100"
+          required
+        >
+      </div>
+
+      <div v-if="smtpEnabled" class="field">
+        <label for="email">Identifiant / E-mail</label>
+        <input
+          id="email"
+          v-model.trim="form.email"
+          type="email"
+          inputmode="email"
+          placeholder="Votre e-mail Esisar"
+          autocomplete="username"
+          autocapitalize="none"
+          maxlength="254"
+          :required="smtpEnabled"
+        >
+      </div>
+
+      <div v-if="smtpEnabled" class="field">
+        <label for="password">Mot de passe (SMTP)</label>
+        <div class="password-wrap">
           <input
             id="password"
             v-model="form.password"
-            type="password"
-            placeholder="Mot de passe pour l'authentification SMTP"
-            required
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="Mot de passe de votre messagerie"
+            autocomplete="current-password"
+            maxlength="256"
+            :required="smtpEnabled"
           >
-          <small>⚠️ Nécessaire pour envoyer les emails via le serveur SMTP</small>
+          <button
+            type="button"
+            class="toggle-password"
+            :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            @click="showPassword = !showPassword"
+          >
+            <AppIcon :name="showPassword ? 'eye-off' : 'eye'" />
+          </button>
         </div>
+      </div>
 
-        <button type="submit" class="btn-primary">Continuer</button>
-      </form>
-    </div>
+      <p class="privacy">
+        <AppIcon name="lock" :size="16" />
+        <span>{{ smtpEnabled ? 'Chiffré et mémorisé' : 'Mémorisé' }} uniquement sur cet appareil.</span>
+      </p>
+
+      <button type="submit" class="btn btn-primary">Continuer</button>
+    </form>
   </div>
 </template>
 
-<script>
-import { reactive } from 'vue';
+<script setup>
+import { reactive, ref } from 'vue';
+import AppIcon from '../components/AppIcon.vue';
 
-export default {
-  emits: ['login'],
-  setup(props, { emit }) {
-    const form = reactive({
-      name: '',
-      email: '',
-      password: ''
-    });
+defineProps({
+  smtpEnabled: { type: Boolean, default: true }
+});
+const emit = defineEmits(['login']);
 
-    const handleSubmit = () => {
-      if (form.name && form.email && form.password) {
-        emit('login', { ...form });
-        form.name = '';
-        form.email = '';
-        form.password = '';
-      }
-    };
+const form = reactive({ name: '', email: '', password: '' });
+const showPassword = ref(false);
 
-    return {
-      form,
-      handleSubmit
-    };
-  }
+const handleSubmit = () => {
+  emit('login', { ...form });
+  Object.assign(form, { name: '', email: '', password: '' });
 };
 </script>
 
 <style scoped>
 .login-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 1rem;
+  flex-direction: column;
+  gap: 1.75rem;
+  padding-top: 1.5rem;
 }
 
-.login-card {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;
-}
-
-.login-card h2 {
-  margin-bottom: 1.5rem;
-  color: #333;
+.brand {
   text-align: center;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
+.logo {
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #333;
-  font-size: 0.95rem;
+.brand h1 {
+  margin-top: 1rem;
+  font-size: 1.75rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  font-family: inherit;
-  transition: border-color 0.3s;
+.brand p {
+  margin-top: 0.35rem;
+  color: var(--muted);
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.login-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.5rem;
 }
 
-.form-group small {
-  display: block;
-  margin-top: 0.25rem;
+.login-card h2 {
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
   font-size: 0.85rem;
-  color: #666;
-}
-
-.btn-primary {
-  width: 100%;
-  padding: 0.75rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
   font-weight: 600;
+  color: var(--muted);
+}
+
+.field input {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 1rem;
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 1rem; /* 16 px : évite le zoom automatique d'iOS */
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.field input::placeholder {
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.field input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--primary);
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 3.25rem;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
-  transition: background 0.3s;
 }
 
-.btn-primary:hover {
-  background: #2563eb;
-}
-
-.btn-primary:active {
-  background: #1d4ed8;
+.privacy {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 </style>

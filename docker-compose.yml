@@ -1,33 +1,44 @@
-version: '3.8'
+name: presence-esisar
 
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: presence-backend
-    ports:
-      - "3000:3000"
-    env_file:
-      - ./backend/.env
+  app:
+    build: .
+    image: presence-esisar:latest
+    restart: unless-stopped
     environment:
-      - NODE_ENV=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
+      RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-apprentissage@esisar.grenoble-inp.fr}
+      SMTP_ENABLED: ${SMTP_ENABLED:-true}
+      SMTP_HOST: ${SMTP_HOST:-smtps.esisar.grenoble-inp.fr}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_TLS_REJECT_UNAUTHORIZED: ${SMTP_TLS_REJECT_UNAUTHORIZED:-true}
+      # Proxys devant l'app : nginx puis Caddy
+      TRUST_PROXY: 2
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    pids_limit: 100
 
-  nginx:
-    image: nginx:latest
-    container_name: presence-nginx
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./docs/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - backend
+  caddy:
+    image: caddy:2-alpine
     restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    pids_limit: 100
+
+volumes:
+  caddy_data:
+  caddy_config:

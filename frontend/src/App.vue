@@ -1,105 +1,88 @@
 <template>
-  <div class="app-container">
-    <header class="app-header">
-      <h1>Attestation Présence Esisar</h1>
-    </header>
-
+  <div class="app-shell">
     <main class="app-content">
-      <LoginView v-if="!isAuthenticated" @login="handleLogin" />
-      <DashboardView v-else @logout="handleLogout" :user="currentUser" />
+      <InstallBanner />
+      <template v-if="ready">
+        <LoginView v-if="!user" :smtp-enabled="config.smtpEnabled" @login="handleLogin" />
+        <DashboardView
+          v-else
+          :user="user"
+          :smtp-enabled="config.smtpEnabled"
+          :recipient="config.recipient"
+          @logout="handleLogout"
+        />
+      </template>
     </main>
   </div>
 </template>
 
-<script>
-import { ref, onMounted } from 'vue';
+<script setup>
+import { onMounted, ref } from 'vue';
 import LoginView from './views/LoginView.vue';
 import DashboardView from './views/DashboardView.vue';
+import InstallBanner from './components/InstallBanner.vue';
+import { canPersist, clearCredentials, loadCredentials, saveCredentials } from './lib/credentials';
 
-export default {
-  components: {
-    LoginView,
-    DashboardView
-  },
-  setup() {
-    const isAuthenticated = ref(false);
-    const currentUser = ref(null);
+const user = ref(null);
+const ready = ref(false);
+// Si la config est injoignable (hors ligne), l'envoi SMTP reste proposé : le serveur a le dernier mot.
+const config = ref({ smtpEnabled: true, recipient: '' });
 
-    onMounted(() => {
-      const storedUser = localStorage.getItem('presenceUser');
-      if (storedUser) {
-        try {
-          currentUser.value = JSON.parse(storedUser);
-          isAuthenticated.value = true;
-        } catch (e) {
-          console.error('Failed to parse stored user:', e);
-        }
-      }
-    });
-
-    const handleLogin = (userData) => {
-      currentUser.value = userData;
-      isAuthenticated.value = true;
-      // Simple obfuscation for password storage (not production-grade encryption)
-      const obfuscatedData = {
-        ...userData,
-        password: btoa(userData.password)
-      };
-      localStorage.setItem('presenceUser', JSON.stringify(obfuscatedData));
-    };
-
-    const handleLogout = () => {
-      localStorage.removeItem('presenceUser');
-      currentUser.value = null;
-      isAuthenticated.value = false;
-    };
-
-    return {
-      isAuthenticated,
-      currentUser,
-      handleLogin,
-      handleLogout
-    };
+const loadConfig = async () => {
+  try {
+    config.value = { ...config.value, ...(await (await fetch('/api/config')).json()) };
+  } catch (error) {
+    console.error('Configuration indisponible:', error);
   }
+};
+
+onMounted(async () => {
+  try {
+    const [stored] = await Promise.all([loadCredentials(), loadConfig()]);
+    user.value = reconcile(stored);
+  } finally {
+    ready.value = true;
+  }
+});
+
+// Aligne l'identité mémorisée sur le mode courant (le flag SMTP peut changer entre deux déploiements).
+const reconcile = (stored) => {
+  if (!stored) return null;
+  if (config.value.smtpEnabled) return stored.email && stored.password ? stored : null;
+  const nameOnly = { name: stored.name };
+  if (stored.email || stored.password) persist(nameOnly); // purge l'ancien mot de passe chiffré
+  return nameOnly;
+};
+
+const persist = async (credentials) => {
+  if (!canPersist()) return;
+  try {
+    await saveCredentials(credentials);
+  } catch (error) {
+    console.error('Mémorisation des identifiants impossible:', error);
+  }
+};
+
+const handleLogin = async (credentials) => {
+  await persist(credentials); // avant l'affichage : un rechargement immédiat ne doit pas perdre l'identité
+  user.value = credentials;
+};
+
+const handleLogout = async () => {
+  user.value = null;
+  await clearCredentials();
 };
 </script>
 
 <style scoped>
-.app-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  background: #f5f5f5;
-}
-
-.app-header {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.app-header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0;
+.app-shell {
+  min-height: 100dvh;
 }
 
 .app-content {
-  flex: 1;
-  padding: 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
   width: 100%;
-}
-
-@media (max-width: 640px) {
-  .app-header h1 {
-    font-size: 1.25rem;
-  }
-
-  .app-content {
-    padding: 0.5rem;
-  }
+  max-width: 520px;
+  margin: 0 auto;
+  padding: calc(1rem + var(--safe-top)) calc(1rem + var(--safe-right)) 1rem calc(1rem + var(--safe-left));
 }
 </style>
