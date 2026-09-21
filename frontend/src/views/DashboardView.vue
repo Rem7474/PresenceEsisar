@@ -70,6 +70,13 @@
           <code>{{ generatedFilename }}</code>
         </div>
       </div>
+
+      <div v-if="recipient" class="filename-display recipient">
+        <span class="filename-label">Destinataire</span>
+        <div class="filename-box">
+          <code>{{ recipient }}</code>
+        </div>
+      </div>
     </section>
 
     <div class="action-bar">
@@ -104,7 +111,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import AppIcon from '../components/AppIcon.vue';
 import { isoWeek } from '../lib/week';
 import { ACCEPTED_TYPES, MAX_FILE_SIZE, buildFilename } from '../lib/filename';
-import { MAIL_BODY, buildMailto, buildSubject } from '../lib/mail';
+import { buildBody, buildMailto, buildSubject } from '../lib/mail';
 
 const props = defineProps({
   user: { type: Object, required: true },
@@ -221,7 +228,7 @@ const handleExternalMail = async () => {
 
   const subject = buildSubject(generatedFilename.value);
   const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
-  const shareData = { files: [file], title: subject, text: `${MAIL_BODY}\n\nDestinataire : ${props.recipient}` };
+  const shareData = { files: [file], title: subject, text: buildBody(subject) };
 
   if (navigator.canShare?.(shareData)) {
     try {
@@ -234,7 +241,7 @@ const handleExternalMail = async () => {
   }
 
   downloadFile(file);
-  window.location.href = buildMailto(props.recipient, subject, MAIL_BODY);
+  window.location.href = buildMailto(props.recipient, subject, buildBody(subject));
   showMessage('Fichier téléchargé : joignez-le au mail qui vient de s\'ouvrir.', 'success');
 };
 
@@ -437,6 +444,11 @@ onBeforeUnmount(() => {
   gap: 0.4rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.filename-display.recipient {
+  padding-top: 0;
+  border-top: none;
 }
 
 .filename-label {
