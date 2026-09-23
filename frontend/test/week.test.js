@@ -12,6 +12,6 @@ test('isoWeek suit la norme ISO 8601', () => {
 });
 
 test('buildFilename suit le format exigé et choisit la bonne extension', () => {
-  assert.equal(buildFilename('Jean Dupont', 38, 'application/pdf'), 'Attestation présence P2027- Jean Dupont - Esisar- Semaine 38.pdf');
-  assert.equal(buildFilename('Jean/Dupont', 3, 'image/png'), 'Attestation présence P2027- Jean Dupont - Esisar- Semaine 3.png');
+  assert.equal(buildFilename('Jean Dupont', 38, 'application/pdf'), 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38.pdf');
+  assert.equal(buildFilename('Jean/Dupont', 3, 'image/png'), 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 3.png');
 });

@@ -48,4 +48,4 @@ export const isValidEmail = (email) => {
 };
 
 export const buildFilename = (name, week, ext) =>
-  `Attestation présence P2027- ${sanitizeName(name)} - Esisar- Semaine ${week}.${ext}`;
+  `Attestation présence P2027-${sanitizeName(name)}-Esisar-Semaine ${week}.${ext}`;

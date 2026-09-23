@@ -17,4 +17,4 @@ const cleanName = (name) =>
     .trim();
 
 export const buildFilename = (name, week, mimeType) =>
-  `Attestation présence P2027- ${cleanName(name)} - Esisar- Semaine ${week}.${EXTENSIONS[mimeType] ?? 'jpg'}`;
+  `Attestation présence P2027-${cleanName(name)}-Esisar-Semaine ${week}.${EXTENSIONS[mimeType] ?? 'jpg'}`;

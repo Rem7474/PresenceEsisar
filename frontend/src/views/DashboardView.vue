@@ -206,7 +206,7 @@ const initials = computed(() =>
 const generatedFilename = computed(() =>
   selectedFile.value
     ? buildFilename(props.user.name, selectedWeek.value, selectedFile.value.type)
-    : 'Attestation présence P2027- [ NOM ] - Esisar- Semaine [ Numero ]'
+    : 'Attestation présence P2027-[ NOM ]-Esisar-Semaine [ Numero ]'
 );
 
 const generatedSubject = computed(() =>

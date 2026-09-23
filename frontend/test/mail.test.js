@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildBody, buildMailto, buildSubject } from '../src/lib/mail.js';
 
 test('buildSubject retire l\'extension', () => {
-  assert.equal(buildSubject('Attestation présence P2027- Jean Dupont - Esisar- Semaine 38.pdf'), 'Attestation présence P2027- Jean Dupont - Esisar- Semaine 38');
+  assert.equal(buildSubject('Attestation présence P2027-Jean Dupont-Esisar-Semaine 38.pdf'), 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38');
 });
 
 test('buildMailto encode destinataire, objet et corps', () => {
