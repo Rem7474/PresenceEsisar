@@ -12,10 +12,45 @@
     </header>
 
     <section class="card hero">
-      <span class="eyebrow">Feuille de présence P2027</span>
-      <div class="week-info">
-        <span class="week-label">Semaine</span>
-        <span class="week-number">{{ week }}</span>
+      <div class="hero-header">
+        <span class="eyebrow">Feuille de présence P2027</span>
+        <button
+          v-if="selectedWeek !== currentWeek"
+          class="btn-reset-week"
+          type="button"
+          aria-label="Revenir à la semaine actuelle"
+          @click="resetWeek"
+        >
+          <AppIcon name="rotate-ccw" :size="13" />
+          <span>Semaine actuelle ({{ currentWeek }})</span>
+        </button>
+      </div>
+
+      <div class="week-picker">
+        <button
+          class="week-nav-btn"
+          type="button"
+          :disabled="selectedWeek <= 1"
+          aria-label="Semaine précédente"
+          @click="decrementWeek"
+        >
+          <AppIcon name="chevron-left" :size="22" />
+        </button>
+
+        <div class="week-info">
+          <span class="week-label">Semaine</span>
+          <span class="week-number">{{ selectedWeek }}</span>
+        </div>
+
+        <button
+          class="week-nav-btn"
+          type="button"
+          :disabled="selectedWeek >= 53"
+          aria-label="Semaine suivante"
+          @click="incrementWeek"
+        >
+          <AppIcon name="chevron-right" :size="22" />
+        </button>
       </div>
     </section>
 
@@ -135,7 +170,21 @@ const isLoading = ref(false);
 const message = ref('');
 const messageType = ref('');
 
-const week = isoWeek();
+const currentWeek = isoWeek();
+const selectedWeek = ref(currentWeek);
+
+const decrementWeek = () => {
+  if (selectedWeek.value > 1) selectedWeek.value--;
+};
+
+const incrementWeek = () => {
+  if (selectedWeek.value < 53) selectedWeek.value++;
+};
+
+const resetWeek = () => {
+  selectedWeek.value = currentWeek;
+};
+
 let messageTimer;
 
 const initials = computed(() =>
@@ -149,7 +198,7 @@ const initials = computed(() =>
 
 const generatedFilename = computed(() =>
   selectedFile.value
-    ? buildFilename(props.user.name, week, selectedFile.value.type)
+    ? buildFilename(props.user.name, selectedWeek.value, selectedFile.value.type)
     : 'Attestation présence P2027- [ NOM ] - Esisar- Semaine [ Numero ]'
 );
 
@@ -197,7 +246,7 @@ const handleSubmit = async () => {
     body.append('file', selectedFile.value);
     body.append('name', props.user.name);
     body.append('email', props.user.email);
-    body.append('week', String(week));
+    body.append('week', String(selectedWeek.value));
 
     const response = await fetch('/api/upload', { method: 'POST', body });
     const result = await response.json().catch(() => ({}));
@@ -324,10 +373,18 @@ onBeforeUnmount(() => {
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
   background: linear-gradient(140deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #6d28d9));
   border-color: transparent;
   color: var(--on-primary);
+}
+
+.hero-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 26px;
 }
 
 .eyebrow {
@@ -336,6 +393,63 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.85;
+}
+
+.btn-reset-week {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-reset-week:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.btn-reset-week:active {
+  transform: scale(0.95);
+}
+
+.week-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.week-nav-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+
+.week-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.week-nav-btn:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.week-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .week-info {
