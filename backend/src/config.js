@@ -20,7 +20,10 @@ export const config = {
     port: smtpPort,
     // 465 : SSL/TLS dès la connexion ; autres ports (587) : STARTTLS obligatoire.
     secure: bool(process.env.SMTP_SECURE, smtpPort === 465),
-    rejectUnauthorized: bool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true)
+    rejectUnauthorized: bool(process.env.SMTP_TLS_REJECT_UNAUTHORIZED, true),
+    user: process.env.SMTP_USER ?? '',
+    pass: process.env.SMTP_PASS ?? '',
+    from: process.env.SMTP_FROM ?? (process.env.SMTP_USER || 'apprentissage@esisar.grenoble-inp.fr')
   },
   maxFileSize: 10 * 1024 * 1024
 };

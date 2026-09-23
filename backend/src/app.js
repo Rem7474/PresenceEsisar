@@ -60,22 +60,26 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
 
   app.post('/api/upload', requireSmtp, failedAttempts, upload.single('file'), async (req, res, next) => {
     try {
-      const { name, email, password, week: rawWeek } = req.body;
+      const { name, email, week: rawWeek } = req.body;
       const week = Number(rawWeek);
 
       if (!req.file) return res.status(400).json({ error: 'Aucun fichier fourni.' });
-      if (!isBoundedString(name, 100) || !sanitizeName(name)) return res.status(400).json({ error: 'Nom invalide.' });
+      const cleanName = sanitizeName(name);
+      if (!isBoundedString(name, 100) || !cleanName) return res.status(400).json({ error: 'Nom invalide.' });
       if (!isValidEmail(email)) return res.status(400).json({ error: 'Adresse e-mail invalide.' });
-      if (!isBoundedString(password, 256)) return res.status(400).json({ error: 'Mot de passe manquant.' });
       if (!isValidWeek(week)) return res.status(400).json({ error: 'Numéro de semaine invalide.' });
 
       const type = detectFileType(req.file.buffer);
       if (!type) return res.status(400).json({ error: 'Format non supporté (JPEG, PNG, WebP ou PDF).' });
 
+      const filename = buildFilename(cleanName, week, type.ext);
+      const subject = filename.replace(/\.[^.]+$/, '');
+
       await sendPresenceEmail({
+        name: cleanName,
         email,
-        password,
-        filename: buildFilename(name, week, type.ext),
+        filename,
+        subject,
         content: req.file.buffer
       });
 

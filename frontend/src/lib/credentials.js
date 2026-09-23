@@ -1,6 +1,5 @@
-// Stockage local des identifiants.
-// Le mot de passe est chiffré en AES-GCM ; la clé est non exportable et vit dans IndexedDB,
-// le localStorage ne contient donc que du chiffré inutilisable hors de ce navigateur.
+// Stockage local des informations de l'étudiant (Nom et E-mail).
+// Aucun mot de passe n'est requis ni stocké.
 
 const DB_NAME = 'presence-esisar';
 const STORE = 'keys';
@@ -28,46 +27,68 @@ const withStore = async (mode, action) => {
   }
 };
 
-const getKey = async () => {
-  const existing = await withStore('readonly', (store) => store.get(KEY_ID));
-  if (existing) return existing;
-  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-  await withStore('readwrite', (store) => store.put(key, KEY_ID));
-  return key;
-};
-
-const toBase64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
 
-export const canPersist = () => Boolean(globalThis.crypto?.subtle && globalThis.indexedDB);
-
-export const saveCredentials = async (user) => {
-  const key = await getKey();
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(user)));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 2, iv: toBase64(iv), data: toBase64(data) }));
+const tryMigrateLegacy = async (raw) => {
+  try {
+    const parsed = JSON.parse(raw);
+    // Format moderne (clair) : { name, email }
+    if (parsed && typeof parsed === 'object' && ('name' in parsed || 'email' in parsed)) {
+      return {
+        name: typeof parsed.name === 'string' ? parsed.name.trim() : '',
+        email: typeof parsed.email === 'string' ? parsed.email.trim() : ''
+      };
+    }
+    // Ancien format chiffré v2 : { v: 2, iv, data }
+    if (parsed?.v === 2 && parsed.iv && parsed.data && globalThis.crypto?.subtle && globalThis.indexedDB) {
+      const key = await withStore('readonly', (store) => store.get(KEY_ID));
+      if (key) {
+        const plain = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: fromBase64(parsed.iv) },
+          key,
+          fromBase64(parsed.data)
+        );
+        const legacy = JSON.parse(new TextDecoder().decode(plain));
+        const migrated = {
+          name: typeof legacy.name === 'string' ? legacy.name.trim() : '',
+          email: typeof legacy.email === 'string' ? legacy.email.trim() : ''
+        };
+        // Sauvegarde immédiate au format clair (sans mot de passe)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        // Nettoyage de l'ancienne clé IndexedDB
+        try {
+          await withStore('readwrite', (store) => store.delete(KEY_ID));
+        } catch {}
+        return migrated;
+      }
+    }
+  } catch (e) {
+    console.warn('Impossible de lire les identifiants précédents:', e);
+  }
+  return null;
 };
 
-/** Retourne l'utilisateur mémorisé, ou null (rien de stocké, ou stockage illisible → purgé). */
+export const canPersist = () => typeof localStorage !== 'undefined';
+
+export const saveCredentials = async (user) => {
+  const data = {
+    name: typeof user.name === 'string' ? user.name.trim() : '',
+    email: typeof user.email === 'string' ? user.email.trim() : ''
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+};
+
 export const loadCredentials = async () => {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return null;
-  try {
-    const { iv, data } = JSON.parse(raw);
-    const key = await getKey();
-    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: fromBase64(iv) }, key, fromBase64(data));
-    return JSON.parse(new TextDecoder().decode(plain));
-  } catch {
-    await clearCredentials();
-    return null;
-  }
+  return await tryMigrateLegacy(raw);
 };
 
 export const clearCredentials = async () => {
   localStorage.removeItem(STORAGE_KEY);
   try {
-    await withStore('readwrite', (store) => store.delete(KEY_ID));
-  } catch {
-    // IndexedDB indisponible : il n'y a alors aucune clé à supprimer.
-  }
+    if (globalThis.indexedDB) {
+      await withStore('readwrite', (store) => store.delete(KEY_ID));
+    }
+  } catch {}
 };

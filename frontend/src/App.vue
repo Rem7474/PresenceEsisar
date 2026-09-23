@@ -3,7 +3,12 @@
     <main class="app-content">
       <InstallBanner />
       <template v-if="ready">
-        <LoginView v-if="!user" :smtp-enabled="config.smtpEnabled" @login="handleLogin" />
+        <LoginView
+          v-if="!user"
+          :initial-user="initialUser"
+          :smtp-enabled="config.smtpEnabled"
+          @login="handleLogin"
+        />
         <DashboardView
           v-else
           :user="user"
@@ -24,6 +29,7 @@ import InstallBanner from './components/InstallBanner.vue';
 import { canPersist, clearCredentials, loadCredentials, saveCredentials } from './lib/credentials';
 
 const user = ref(null);
+const initialUser = ref({ name: '', email: '' });
 const ready = ref(false);
 // Si la config est injoignable (hors ligne), l'envoi SMTP reste proposé : le serveur a le dernier mot.
 const config = ref({ smtpEnabled: true, recipient: '' });
@@ -36,40 +42,56 @@ const loadConfig = async () => {
   }
 };
 
+const isValidEmail = (email) =>
+  typeof email === 'string' &&
+  email.length > 3 &&
+  email.includes('@') &&
+  email.includes('.');
+
 onMounted(async () => {
   try {
     const [stored] = await Promise.all([loadCredentials(), loadConfig()]);
-    user.value = reconcile(stored);
+    if (stored) {
+      const hasName = Boolean(stored.name?.trim());
+      const hasEmail = Boolean(stored.email && isValidEmail(stored.email.trim()));
+
+      if (hasName && hasEmail) {
+        user.value = { name: stored.name.trim(), email: stored.email.trim() };
+      } else {
+        // Redirige vers la configuration avec le nom déjà pré-rempli si présent
+        user.value = null;
+        initialUser.value = {
+          name: stored.name?.trim() || '',
+          email: stored.email?.trim() || ''
+        };
+      }
+    }
   } finally {
     ready.value = true;
   }
 });
-
-// Aligne l'identité mémorisée sur le mode courant (le flag SMTP peut changer entre deux déploiements).
-const reconcile = (stored) => {
-  if (!stored) return null;
-  if (config.value.smtpEnabled) return stored.email && stored.password ? stored : null;
-  const nameOnly = { name: stored.name };
-  if (stored.email || stored.password) persist(nameOnly); // purge l'ancien mot de passe chiffré
-  return nameOnly;
-};
 
 const persist = async (credentials) => {
   if (!canPersist()) return;
   try {
     await saveCredentials(credentials);
   } catch (error) {
-    console.error('Mémorisation des identifiants impossible:', error);
+    console.error('Mémorisation des informations impossible:', error);
   }
 };
 
 const handleLogin = async (credentials) => {
-  await persist(credentials); // avant l'affichage : un rechargement immédiat ne doit pas perdre l'identité
-  user.value = credentials;
+  const clean = {
+    name: credentials.name.trim(),
+    email: credentials.email.trim()
+  };
+  await persist(clean);
+  user.value = clean;
 };
 
 const handleLogout = async () => {
   user.value = null;
+  initialUser.value = { name: '', email: '' };
   await clearCredentials();
 };
 </script>

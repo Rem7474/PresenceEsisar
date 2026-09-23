@@ -26,7 +26,7 @@ test('sanitizeName neutralise séparateurs de chemin et caractères de contrôle
 test('buildFilename respecte le format exigé', () => {
   assert.equal(
     buildFilename('Jean Dupont', 38, 'pdf'),
-    'Attestation présence P2027- Jean Dupont - Esisar- Semaine 38.pdf'
+    'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38.pdf'
   );
 });
 
