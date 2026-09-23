@@ -33,6 +33,7 @@ test('envoie le fichier renommé avec nom et e-mail fournis', async () => {
   assert.equal(calls[0].filename, 'Attestation présence P2027- Jean Dupont - Esisar- Semaine 38.pdf');
   assert.equal(calls[0].name, 'Jean Dupont');
   assert.equal(calls[0].email, 'jean@esisar.fr');
+  assert.equal(calls[0].subject, 'Attestation présence P2027- Jean Dupont - Esisar- Semaine 38');
 });
 
 test('rejette les requêtes invalides sans appeler le SMTP', async () => {

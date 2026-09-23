@@ -72,10 +72,14 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
       const type = detectFileType(req.file.buffer);
       if (!type) return res.status(400).json({ error: 'Format non supporté (JPEG, PNG, WebP ou PDF).' });
 
+      const filename = buildFilename(cleanName, week, type.ext);
+      const subject = filename.replace(/\.[^.]+$/, '');
+
       await sendPresenceEmail({
         name: cleanName,
         email,
-        filename: buildFilename(cleanName, week, type.ext),
+        filename,
+        subject,
         content: req.file.buffer
       });
 

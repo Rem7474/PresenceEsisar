@@ -34,17 +34,19 @@ export const getTransporter = () => {
  * Destinataire : service apprentissage (config.recipient).
  * Copie (cc) et réponse (replyTo) : adresse e-mail de l'étudiant.
  */
-export const sendPresenceEmail = async ({ name, email, filename, content }) => {
+export const sendPresenceEmail = async ({ name, email, filename, subject, content }) => {
   const transporter = getTransporter();
 
   try {
     const cleanName = name.replace(/["\r\n]/g, '').trim();
+    const mailSubject = (subject || (filename ? filename.replace(/\.[^.]+$/, '') : `Attestation présence P2027- ${cleanName}`)).trim();
+
     await transporter.sendMail({
       from: `"${cleanName} (via Présence Esisar)" <${config.smtp.from}>`,
       to: config.recipient,
       cc: email,
       replyTo: `"${cleanName}" <${email}>`,
-      subject: filename.replace(/\.[^.]+$/, ''),
+      subject: mailSubject,
       text: `Bonjour,\n\nVeuillez trouver ci-joint l'attestation de présence de ${cleanName}.\n\nÉtudiant : ${cleanName} (${email})\nFichier : ${filename}\n\nCordialement`,
       attachments: [{ filename, content }]
     });

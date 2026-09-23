@@ -106,6 +106,13 @@
         </div>
       </div>
 
+      <div class="filename-display recipient">
+        <span class="filename-label">Objet du mail</span>
+        <div class="filename-box">
+          <code>{{ generatedSubject }}</code>
+        </div>
+      </div>
+
       <div v-if="recipient" class="filename-display recipient">
         <span class="filename-label">Destinataire</span>
         <div class="filename-box">
@@ -202,6 +209,10 @@ const generatedFilename = computed(() =>
     : 'Attestation présence P2027- [ NOM ] - Esisar- Semaine [ Numero ]'
 );
 
+const generatedSubject = computed(() =>
+  buildSubject(generatedFilename.value)
+);
+
 const showMessage = (text, type) => {
   message.value = text;
   messageType.value = type;
@@ -283,7 +294,7 @@ const handleExternalMail = async () => {
 
   const subject = buildSubject(generatedFilename.value);
   const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
-  const shareData = { files: [file], title: subject, text: buildBody(subject) };
+  const shareData = { files: [file], title: subject, text: `Objet : ${subject}\n\n${buildBody(subject)}` };
 
   if (navigator.canShare?.(shareData)) {
     // Le partage natif n'a pas de champ « À » : l'adresse est copiée pour être collée dans l'app mail.
