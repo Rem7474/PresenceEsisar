@@ -35,7 +35,10 @@ Configuration facultative via `.env` (voir `.env.example`, chaque variable a une
 | `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
 | `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
 | `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
-| `SMTP_ENABLED` | `true` | `false` désactive l'envoi SMTP : seuls le nom est demandé et l'envoi via l'application e-mail est proposé |
+| `SMTP_ENABLED` | `true` | `false` désactive l'envoi SMTP direct |
+| `SMTP_USER` | *(vide)* | Identifiant d'authentification SMTP du serveur |
+| `SMTP_PASS` | *(vide)* | Mot de passe SMTP du serveur |
+| `SMTP_FROM` | `presence@esisar.grenoble-inp.fr` | Adresse d'expédition des e-mails |
 | `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP : 465 = SSL/TLS, autre port (587) = STARTTLS |
 | `SMTP_SECURE` | déduit du port | `true` (SSL/TLS) ou `false` (STARTTLS) pour forcer le mode |
 | `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
@@ -61,19 +64,19 @@ Dockerfile, docker-compose.yml, Caddyfile, .env.example
 
 ## Sécurité
 
-- **Identifiants** : saisis une seule fois, le mot de passe est chiffré en AES-GCM dans le navigateur ; la clé,
-  non exportable, est stockée dans IndexedDB. Le serveur reçoit le mot de passe en HTTPS pour la durée de
-  l'envoi uniquement : il n'est ni stocké ni journalisé.
-- **SMTP** : SSL/TLS (port 465) ou STARTTLS obligatoire (587), certificat du serveur vérifié.
+- **Identifiants** : aucun mot de passe utilisateur n'est demandé ni stocké. Seuls le nom et l'adresse e-mail sont
+  conservés localement dans le navigateur pour pré-remplir les prochains envois et adresser la copie du mail.
+- **SMTP** : compte d'envoi unique configuré côté serveur, connexion SSL/TLS (port 465) ou STARTTLS (587),
+  avec copie (`cc`) et adresse de réponse (`replyTo`) envoyées vers l'e-mail de l'étudiant.
 - **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de
-  fichier assaini, limitation des tentatives échouées (20 / 15 min / IP) contre le brute-force d'identifiants.
+  fichier assaini, limitation de débit des requêtes abusives ou erronées.
 - **Web** : CSP stricte, en-têtes Helmet (HSTS laissé à nginx), aucune source de script ou de style inline.
 
 ## API
 
-`POST /api/upload` (`multipart/form-data`) : `file`, `name`, `email`, `password`, `week`.
-Réponses : `200 {success:true}`, `400` requête invalide, `401` authentification SMTP refusée, `413` fichier
-trop gros, `429` trop de tentatives, `502` SMTP injoignable ou envoi refusé.
+`POST /api/upload` (`multipart/form-data`) : `file`, `name`, `email`, `week`.
+Réponses : `200 {success:true}`, `400` requête invalide, `413` fichier trop gros, `429` trop de tentatives,
+`502` SMTP injoignable ou envoi refusé.
 `GET /api/health` : `{status:"ok"}`.
 
 ## Développement local

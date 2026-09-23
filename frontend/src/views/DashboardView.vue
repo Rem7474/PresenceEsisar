@@ -77,6 +77,13 @@
           <code>{{ recipient }}</code>
         </div>
       </div>
+
+      <div v-if="user.email" class="filename-display recipient">
+        <span class="filename-label">Copie envoyée à</span>
+        <div class="filename-box">
+          <code>{{ user.email }}</code>
+        </div>
+      </div>
     </section>
 
     <div class="action-bar">
@@ -190,14 +197,13 @@ const handleSubmit = async () => {
     body.append('file', selectedFile.value);
     body.append('name', props.user.name);
     body.append('email', props.user.email);
-    body.append('password', props.user.password);
     body.append('week', String(week));
 
     const response = await fetch('/api/upload', { method: 'POST', body });
     const result = await response.json().catch(() => ({}));
 
     if (response.ok) {
-      showMessage('Fichier envoyé avec succès !', 'success');
+      showMessage('Fichier envoyé avec succès ! Une copie vous a été envoyée par e-mail.', 'success');
       resetSelection();
     } else {
       showMessage(result.error || "Erreur lors de l'envoi.", 'error');

@@ -8,6 +8,9 @@ services:
     environment:
       RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-apprentissage@esisar.grenoble-inp.fr}
       SMTP_ENABLED: ${SMTP_ENABLED:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-presence@esisar.grenoble-inp.fr}
       SMTP_HOST: ${SMTP_HOST:-smtps.esisar.grenoble-inp.fr}
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_SECURE: ${SMTP_SECURE:-}

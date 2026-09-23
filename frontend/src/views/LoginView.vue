@@ -7,7 +7,11 @@
     </div>
 
     <form class="card login-card" @submit.prevent="handleSubmit">
-      <h2>{{ smtpEnabled ? 'Première connexion' : 'Votre nom' }}</h2>
+      <h2>{{ isCompletingProfile ? 'Complétez votre profil' : 'Première connexion' }}</h2>
+
+      <p v-if="isCompletingProfile" class="notice-info">
+        Renseignez votre adresse e-mail afin de recevoir automatiquement une copie de vos attestations envoyées.
+      </p>
 
       <div class="field">
         <label for="name">Nom complet</label>
@@ -22,47 +26,25 @@
         >
       </div>
 
-      <div v-if="smtpEnabled" class="field">
-        <label for="email">Identifiant / E-mail</label>
+      <div class="field">
+        <label for="email">Adresse e-mail</label>
         <input
           id="email"
           v-model.trim="form.email"
           type="email"
           inputmode="email"
-          placeholder="Votre e-mail Esisar"
-          autocomplete="username"
+          placeholder="prenom.nom@grenoble-inp.org"
+          autocomplete="email"
           autocapitalize="none"
           maxlength="254"
-          :required="smtpEnabled"
+          required
         >
-      </div>
-
-      <div v-if="smtpEnabled" class="field">
-        <label for="password">Mot de passe (SMTP)</label>
-        <div class="password-wrap">
-          <input
-            id="password"
-            v-model="form.password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Mot de passe de votre messagerie"
-            autocomplete="current-password"
-            maxlength="256"
-            :required="smtpEnabled"
-          >
-          <button
-            type="button"
-            class="toggle-password"
-            :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
-            @click="showPassword = !showPassword"
-          >
-            <AppIcon :name="showPassword ? 'eye-off' : 'eye'" />
-          </button>
-        </div>
+        <span class="hint">Une copie de l'attestation vous sera transmise à cette adresse.</span>
       </div>
 
       <p class="privacy">
         <AppIcon name="lock" :size="16" />
-        <span>{{ smtpEnabled ? 'Chiffré et mémorisé' : 'Mémorisé' }} uniquement sur cet appareil.</span>
+        <span>Mémorisé uniquement sur cet appareil.</span>
       </p>
 
       <button type="submit" class="btn btn-primary">Continuer</button>
@@ -71,20 +53,34 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import AppIcon from '../components/AppIcon.vue';
 
-defineProps({
-  smtpEnabled: { type: Boolean, default: true }
+const props = defineProps({
+  smtpEnabled: { type: Boolean, default: true },
+  initialUser: { type: Object, default: () => ({ name: '', email: '' }) }
 });
 const emit = defineEmits(['login']);
 
-const form = reactive({ name: '', email: '', password: '' });
-const showPassword = ref(false);
+const form = reactive({
+  name: props.initialUser?.name || '',
+  email: props.initialUser?.email || ''
+});
+
+watch(
+  () => props.initialUser,
+  (val) => {
+    if (val?.name && !form.name) form.name = val.name;
+    if (val?.email && !form.email) form.email = val.email;
+  },
+  { deep: true, immediate: true }
+);
+
+const isCompletingProfile = computed(() => Boolean(props.initialUser?.name && !props.initialUser?.email));
 
 const handleSubmit = () => {
-  emit('login', { ...form });
-  Object.assign(form, { name: '', email: '', password: '' });
+  if (!form.name || !form.email) return;
+  emit('login', { name: form.name.trim(), email: form.email.trim() });
 };
 </script>
 
@@ -131,6 +127,16 @@ const handleSubmit = () => {
   font-weight: 650;
 }
 
+.notice-info {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--primary-soft);
+  border-radius: var(--radius-sm);
+  color: var(--primary-strong);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -164,28 +170,10 @@ const handleSubmit = () => {
   border-color: var(--primary);
 }
 
-.password-wrap {
-  position: relative;
-}
-
-.password-wrap input {
-  padding-right: 3.25rem;
-}
-
-.toggle-password {
-  position: absolute;
-  top: 50%;
-  right: 0.35rem;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  transform: translateY(-50%);
-  border: none;
-  border-radius: 50%;
-  background: transparent;
+.hint {
+  font-size: 0.8rem;
   color: var(--muted);
-  cursor: pointer;
+  line-height: 1.3;
 }
 
 .privacy {
