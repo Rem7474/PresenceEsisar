@@ -52,7 +52,7 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
 
   // Utilisé par le frontend pour l'envoi via une application e-mail externe.
   app.get('/api/config', (_req, res) => {
-    res.set('Cache-Control', 'no-store').json({ recipient: config.recipient, smtpEnabled });
+    res.set('Cache-Control', 'no-store').json({ recipient: config.recipient, smtpEnabled, subject: config.mailSubject });
   });
 
   const requireSmtp = (_req, res, next) =>
@@ -73,7 +73,7 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
       if (!type) return res.status(400).json({ error: 'Format non supporté (JPEG, PNG, WebP ou PDF).' });
 
       const filename = buildFilename(cleanName, week, type.ext);
-      const subject = filename.replace(/\.[^.]+$/, '');
+      const subject = config.mailSubject;
 
       await sendPresenceEmail({
         name: cleanName,

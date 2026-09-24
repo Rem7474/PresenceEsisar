@@ -13,6 +13,7 @@ export const config = {
   trustProxy: Number.parseInt(process.env.TRUST_PROXY ?? '1', 10),
   staticDir: process.env.STATIC_DIR ?? path.resolve(here, '../public'),
   recipient: process.env.RECIPIENT_EMAIL ?? 'apprentissage@esisar.grenoble-inp.fr',
+  mailSubject: process.env.MAIL_SUBJECT ?? 'feuille de présence - 5App',
   smtp: {
     // false : l'envoi direct est désactivé, seul l'envoi via une application e-mail externe reste proposé.
     enabled: bool(process.env.SMTP_ENABLED, true),
