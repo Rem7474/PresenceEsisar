@@ -165,7 +165,8 @@ import { buildBody, buildMailto, buildSubject } from '../lib/mail';
 const props = defineProps({
   user: { type: Object, required: true },
   smtpEnabled: { type: Boolean, default: true },
-  recipient: { type: String, default: '' }
+  recipient: { type: String, default: '' },
+  subject: { type: String, default: '' }
 });
 defineEmits(['logout']);
 
@@ -210,7 +211,7 @@ const generatedFilename = computed(() =>
 );
 
 const generatedSubject = computed(() =>
-  buildSubject(generatedFilename.value)
+  buildSubject(props.subject)
 );
 
 const showMessage = (text, type) => {
@@ -292,9 +293,9 @@ const downloadFile = (file) => {
 const handleExternalMail = async () => {
   if (!selectedFile.value) return;
 
-  const subject = buildSubject(generatedFilename.value);
+  const subject = generatedSubject.value;
   const file = new File([selectedFile.value], generatedFilename.value, { type: selectedFile.value.type });
-  const shareData = { files: [file], title: subject, text: `Objet : ${subject}\n\n${buildBody(subject)}` };
+  const shareData = { files: [file], title: subject, text: `Objet : ${subject}\n\n${buildBody(generatedFilename.value)}` };
 
   if (navigator.canShare?.(shareData)) {
     // Le partage natif n'a pas de champ « À » : l'adresse est copiée pour être collée dans l'app mail.
@@ -319,7 +320,7 @@ const handleExternalMail = async () => {
   }
 
   downloadFile(file);
-  window.location.href = buildMailto(props.recipient, subject, buildBody(subject));
+  window.location.href = buildMailto(props.recipient, subject, buildBody(generatedFilename.value));
   showMessage('Fichier téléchargé : joignez-le au mail qui vient de s\'ouvrir.', 'success');
 };
 

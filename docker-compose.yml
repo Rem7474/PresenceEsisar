@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-apprentissage@esisar.grenoble-inp.fr}
+      MAIL_SUBJECT: ${MAIL_SUBJECT:-feuille de présence - 5App}
       SMTP_ENABLED: ${SMTP_ENABLED:-true}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}

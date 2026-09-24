@@ -33,7 +33,7 @@ test('envoie le fichier renommé avec nom et e-mail fournis', async () => {
   assert.equal(calls[0].filename, 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38.pdf');
   assert.equal(calls[0].name, 'Jean Dupont');
   assert.equal(calls[0].email, 'jean@esisar.fr');
-  assert.equal(calls[0].subject, 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38');
+  assert.equal(calls[0].subject, 'feuille de présence - 5App');
 });
 
 test('rejette les requêtes invalides sans appeler le SMTP', async () => {
@@ -74,6 +74,7 @@ test('expose le destinataire configuré', async () => {
   await withServer(async () => {}, async (url) => {
     const body = await (await fetch(`${url}/api/config`)).json();
     assert.equal(body.recipient, 'apprentissage@esisar.grenoble-inp.fr');
+    assert.equal(body.subject, 'feuille de présence - 5App');
   });
 });
 
