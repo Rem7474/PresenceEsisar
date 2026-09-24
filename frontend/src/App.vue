@@ -14,6 +14,7 @@
           :user="user"
           :smtp-enabled="config.smtpEnabled"
           :recipient="config.recipient"
+          :subject="config.subject"
           @logout="handleLogout"
         />
       </template>
@@ -32,7 +33,7 @@ const user = ref(null);
 const initialUser = ref({ name: '', email: '' });
 const ready = ref(false);
 // Si la config est injoignable (hors ligne), l'envoi SMTP reste proposé : le serveur a le dernier mot.
-const config = ref({ smtpEnabled: true, recipient: '' });
+const config = ref({ smtpEnabled: true, recipient: '', subject: '' });
 
 const loadConfig = async () => {
   try {

@@ -39,7 +39,7 @@ export const sendPresenceEmail = async ({ name, email, filename, subject, conten
 
   try {
     const cleanName = name.replace(/["\r\n]/g, '').trim();
-    const mailSubject = (subject || (filename ? filename.replace(/\.[^.]+$/, '') : `Attestation présence P2027 - ${cleanName}`)).trim();
+    const mailSubject = (subject || config.mailSubject || 'feuille de présence - 5App').trim();
 
     await transporter.sendMail({
       from: `"${cleanName} (via Présence Esisar)" <${config.smtp.from}>`,
