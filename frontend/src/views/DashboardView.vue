@@ -113,17 +113,17 @@
         </div>
       </div>
 
+      <div v-if="user.email" class="filename-display recipient">
+        <span class="filename-label">Expéditeur (votre boîte étudiante)</span>
+        <div class="filename-box">
+          <code>{{ user.email }}</code>
+        </div>
+      </div>
+
       <div v-if="recipient" class="filename-display recipient">
         <span class="filename-label">Destinataire</span>
         <div class="filename-box">
           <code>{{ recipient }}</code>
-        </div>
-      </div>
-
-      <div v-if="user.email" class="filename-display recipient">
-        <span class="filename-label">Copie envoyée à</span>
-        <div class="filename-box">
-          <code>{{ user.email }}</code>
         </div>
       </div>
     </section>
@@ -258,13 +258,14 @@ const handleSubmit = async () => {
     body.append('file', selectedFile.value);
     body.append('name', props.user.name);
     body.append('email', props.user.email);
+    body.append('password', props.user.password || '');
     body.append('week', String(selectedWeek.value));
 
     const response = await fetch('/api/upload', { method: 'POST', body });
     const result = await response.json().catch(() => ({}));
 
     if (response.ok) {
-      showMessage('Fichier envoyé avec succès ! Une copie vous a été envoyée par e-mail.', 'success');
+      showMessage('Fichier envoyé avec succès depuis votre messagerie étudiante !', 'success');
       resetSelection();
     } else {
       showMessage(result.error || "Erreur lors de l'envoi.", 'error');

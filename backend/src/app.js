@@ -14,7 +14,7 @@ const upload = multer({
 
 const isBoundedString = (value, max) => typeof value === 'string' && value.length > 0 && value.length <= max;
 
-export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = config.smtp.enabled } = {}) => {
+export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = config.zimbra.enabled } = {}) => {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
@@ -36,7 +36,7 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
     })
   );
 
-  // Seuls les échecs sont comptés : limite le brute-force d'identifiants SMTP sans gêner l'usage normal.
+  // Seuls les échecs sont comptés : limite le brute-force d'identifiants sans gêner l'usage normal.
   const failedAttempts = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 20,
@@ -60,13 +60,14 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
 
   app.post('/api/upload', requireSmtp, failedAttempts, upload.single('file'), async (req, res, next) => {
     try {
-      const { name, email, week: rawWeek } = req.body;
+      const { name, email, password, week: rawWeek } = req.body;
       const week = Number(rawWeek);
 
       if (!req.file) return res.status(400).json({ error: 'Aucun fichier fourni.' });
       const cleanName = sanitizeName(name);
       if (!isBoundedString(name, 100) || !cleanName) return res.status(400).json({ error: 'Nom invalide.' });
       if (!isValidEmail(email)) return res.status(400).json({ error: 'Adresse e-mail invalide.' });
+      if (!isBoundedString(password, 256)) return res.status(400).json({ error: 'Mot de passe requis.' });
       if (!isValidWeek(week)) return res.status(400).json({ error: 'Numéro de semaine invalide.' });
 
       const type = detectFileType(req.file.buffer);
@@ -78,9 +79,11 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
       await sendPresenceEmail({
         name: cleanName,
         email,
+        password,
         filename,
         subject,
-        content: req.file.buffer
+        content: req.file.buffer,
+        mimeType: type.mime
       });
 
       res.set('Cache-Control', 'no-store').json({ success: true });

@@ -1,6 +1,6 @@
 // Service worker minimal : rend l'app installable et utilisable hors ligne (coquille uniquement).
 // L'envoi d'une attestation nécessite toujours le réseau.
-const CACHE_NAME = 'presence-esisar-v2';
+const CACHE_NAME = 'presence-esisar-__SW_VERSION__';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.add('/')).then(() => self.skipWaiting()));

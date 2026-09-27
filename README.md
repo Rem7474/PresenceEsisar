@@ -1,9 +1,9 @@
 # Attestation Présence Esisar
 
 PWA permettant à un étudiant de photographier (ou importer) sa feuille de présence hebdomadaire et de l'envoyer
-par e-mail au service apprentissage, via le SMTP de l'école.
+par e-mail au service apprentissage, directement depuis sa messagerie étudiante officielle (via l'API Zimbra de l'école).
 
-Le fichier joint est nommé `Attestation présence P2027- [NOM] - Esisar- Semaine [N].[ext]`
+Le fichier joint est nommé `Attestation présence P2027-[NOM]-Esisar-Semaine [N].[ext]`
 (semaine ISO 8601, extension déduite du contenu réel du fichier).
 
 ## Démarrage
@@ -35,20 +35,34 @@ Configuration facultative via `.env` (voir `.env.example`, chaque variable a une
 | `HTTPS_PORT` | `8443` | Port HTTPS publié sur l'hôte |
 | `BIND_ADDRESS` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` si nginx est sur une autre machine) |
 | `RECIPIENT_EMAIL` | `apprentissage@esisar.grenoble-inp.fr` | Destinataire des attestations |
-| `SMTP_ENABLED` | `true` | `false` désactive l'envoi SMTP direct |
-| `SMTP_USER` | *(vide)* | Identifiant d'authentification SMTP du serveur |
-| `SMTP_PASS` | *(vide)* | Mot de passe SMTP du serveur |
-| `SMTP_FROM` | `presence@esisar.grenoble-inp.fr` | Adresse d'expédition des e-mails |
-| `SMTP_HOST` / `SMTP_PORT` | `smtps.esisar.grenoble-inp.fr` / `465` | Serveur SMTP : 465 = SSL/TLS, autre port (587) = STARTTLS |
-| `SMTP_SECURE` | déduit du port | `true` (SSL/TLS) ou `false` (STARTTLS) pour forcer le mode |
-| `SMTP_TLS_REJECT_UNAUTHORIZED` | `true` | `false` uniquement si le SMTP présente un certificat non reconnu |
+| `MAIL_SUBJECT` | `feuille de présence - 5App` | Objet du mail envoyé |
+| `DIRECT_SEND_ENABLED` | `true` | `false` désactive l'envoi direct depuis Zimbra |
+| `ZIMBRA_URL` | `https://mail-etu.esisar.grenoble-inp.fr` | URL de base de la messagerie Zimbra étudiante |
+| `APP_VERSION` | `git describe` | Version applicative injectée au build (tag Git ou hash) |
 
 Mise à jour : `git pull && docker compose up -d --build`. Logs : `docker compose logs -f`.
+
+## Versioning & Mises à jour PWA
+
+L'application injecte automatiquement le tag Git courant (`git describe --tags --always`) au moment du build dans :
+1. La constante client `__APP_VERSION__` (affichée dans la console du navigateur au démarrage).
+2. Le nom de cache du Service Worker (`CACHE_NAME = 'presence-esisar-<version>'` dans `dist/sw.js`).
+
+Pour publier une nouvelle version :
+```bash
+git tag v2.1.0
+git push --tags
+docker compose up -d --build
+```
+
+Dès le déploiement :
+- La navigation étant en **Network-First**, les clients connectés récupèrent immédiatement la nouvelle version de l'application.
+- Le Service Worker détecte le changement de version, active le nouveau cache (`skipWaiting`), supprime automatiquement l'ancien cache (`activate`) et prend le relais (`clients.claim`).
 
 ## Architecture
 
 ```
-navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> caddy ──HTTP──> app (Node) ──SSL/TLS──> SMTP école
+navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> caddy ──HTTP──> app (Node) ──HTTPS (443)──> Zimbra école
 ```
 
 - `caddy` : HTTPS interne auto-signé, compression, limite de taille des requêtes (12 Mo). Seul service publié.
@@ -57,27 +71,30 @@ navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> cadd
   Non exposée, utilisateur non-root, système de fichiers en lecture seule, toutes les capabilities retirées.
 
 ```
-backend/    API Express (server.js, src/app.js, mailer.js, attachment.js) + tests
+backend/    API Express (server.js, src/app.js, zimbra.js, attachment.js) + tests
 frontend/   PWA Vue 3 / Vite (src/, public/ : manifest, service worker, icônes) + tests
 Dockerfile, docker-compose.yml, Caddyfile, .env.example
 ```
 
 ## Sécurité
 
-- **Identifiants** : aucun mot de passe utilisateur n'est demandé ni stocké. Seuls le nom et l'adresse e-mail sont
-  conservés localement dans le navigateur pour pré-remplir les prochains envois et adresser la copie du mail.
-- **SMTP** : compte d'envoi unique configuré côté serveur, connexion SSL/TLS (port 465) ou STARTTLS (587),
-  avec copie (`cc`) et adresse de réponse (`replyTo`) envoyées vers l'e-mail de l'étudiant.
-- **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de
-  fichier assaini, limitation de débit des requêtes abusives ou erronées.
+- **Identifiants de l'étudiant** :
+  - **Chiffrement local AES-GCM (256 bits)** : la clé cryptographique est générée dans le navigateur et conservée dans `IndexedDB` (non-exportable). Le `localStorage` ne contient que le blob chiffré, inutilisable hors de ce navigateur.
+  - **Aucun stockage serveur** : le mot de passe transite uniquement en HTTPS chiffré lors de l'upload. Il n'est **jamais stocké** sur disque, en base de données, ni consigné dans aucun fichier de log.
+- **Envoi Zimbra** :
+  - Authentification SOAP (`AuthRequest`) avec les identifiants étudiants.
+  - Téléversement temporaire de l'attestation (`/service/upload?fmt=raw`).
+  - Distribution du mail (`SendMsgRequest`) expédié directement depuis la boîte étudiante officielle avec copie automatique (`cc`).
+- **API** : type de fichier vérifié sur le contenu (JPEG, PNG, WebP, PDF, 10 Mo max), champs validés, nom de fichier assaini, limitation de débit (`express-rate-limit`, 20 échecs max par 15 min).
 - **Web** : CSP stricte, en-têtes Helmet (HSTS laissé à nginx), aucune source de script ou de style inline.
 
 ## API
 
-`POST /api/upload` (`multipart/form-data`) : `file`, `name`, `email`, `week`.
-Réponses : `200 {success:true}`, `400` requête invalide, `413` fichier trop gros, `429` trop de tentatives,
-`502` SMTP injoignable ou envoi refusé.
+`POST /api/upload` (`multipart/form-data`) : `file`, `name`, `email`, `password`, `week`.
+Réponses : `200 {success:true}`, `400` requête invalide, `401` identifiants incorrects, `413` fichier trop gros, `429` trop de tentatives,
+`502` Zimbra injoignable ou envoi refusé.
 `GET /api/health` : `{status:"ok"}`.
+`GET /api/config` : `{recipient, smtpEnabled, subject}`.
 
 ## Développement local
 

@@ -17,13 +17,13 @@ const withServer = async (sendPresenceEmail, run, options = {}) => {
 
 const form = (fields = {}, file = PDF) => {
   const data = new FormData();
-  const values = { name: 'Jean Dupont', email: 'jean@esisar.fr', week: '38', ...fields };
+  const values = { name: 'Jean Dupont', email: 'jean@esisar.fr', password: 'secret', week: '38', ...fields };
   for (const [key, value] of Object.entries(values)) if (value !== undefined) data.append(key, value);
   if (file) data.append('file', new Blob([file], { type: 'application/pdf' }), 'scan.pdf');
   return data;
 };
 
-test('envoie le fichier renommé avec nom et e-mail fournis', async () => {
+test('envoie le fichier renommé avec nom, e-mail et mot de passe fournis', async () => {
   const calls = [];
   await withServer(async (mail) => calls.push(mail), async (url) => {
     const res = await fetch(`${url}/api/upload`, { method: 'POST', body: form() });
@@ -33,10 +33,11 @@ test('envoie le fichier renommé avec nom et e-mail fournis', async () => {
   assert.equal(calls[0].filename, 'Attestation présence P2027-Jean Dupont-Esisar-Semaine 38.pdf');
   assert.equal(calls[0].name, 'Jean Dupont');
   assert.equal(calls[0].email, 'jean@esisar.fr');
+  assert.equal(calls[0].password, 'secret');
   assert.equal(calls[0].subject, 'feuille de présence - 5App');
 });
 
-test('rejette les requêtes invalides sans appeler le SMTP', async () => {
+test('rejette les requêtes invalides sans appeler le service de messagerie', async () => {
   let called = false;
   await withServer(async () => { called = true; }, async (url) => {
     const post = (body) => fetch(`${url}/api/upload`, { method: 'POST', body });
@@ -45,6 +46,8 @@ test('rejette les requêtes invalides sans appeler le SMTP', async () => {
     assert.equal((await post(form({ name: '' }))).status, 400);
     assert.equal((await post(form({ email: 'pas-un-mail' }))).status, 400);
     assert.equal((await post(form({ email: undefined }))).status, 400);
+    assert.equal((await post(form({ password: undefined }))).status, 400);
+    assert.equal((await post(form({ password: '' }))).status, 400);
     assert.equal((await post(form({ week: '99' }))).status, 400);
     assert.equal((await post(form({}, Buffer.from('MZ pas un pdf ni une image')))).status, 400);
   });

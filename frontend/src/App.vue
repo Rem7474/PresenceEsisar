@@ -30,9 +30,9 @@ import InstallBanner from './components/InstallBanner.vue';
 import { canPersist, clearCredentials, loadCredentials, saveCredentials } from './lib/credentials';
 
 const user = ref(null);
-const initialUser = ref({ name: '', email: '' });
+const initialUser = ref({ name: '', email: '', password: '' });
 const ready = ref(false);
-// Si la config est injoignable (hors ligne), l'envoi SMTP reste proposé : le serveur a le dernier mot.
+// Si la config est injoignable (hors ligne), l'envoi direct reste proposé : le serveur a le dernier mot.
 const config = ref({ smtpEnabled: true, recipient: '', subject: '' });
 
 const loadConfig = async () => {
@@ -55,15 +55,21 @@ onMounted(async () => {
     if (stored) {
       const hasName = Boolean(stored.name?.trim());
       const hasEmail = Boolean(stored.email && isValidEmail(stored.email.trim()));
+      const hasPassword = !config.value.smtpEnabled || Boolean(stored.password);
 
-      if (hasName && hasEmail) {
-        user.value = { name: stored.name.trim(), email: stored.email.trim() };
+      if (hasName && hasEmail && hasPassword) {
+        user.value = {
+          name: stored.name.trim(),
+          email: stored.email.trim(),
+          password: stored.password || ''
+        };
       } else {
-        // Redirige vers la configuration avec le nom déjà pré-rempli si présent
+        // Redirige vers la configuration avec le profil déjà pré-rempli pour compléter le mot de passe
         user.value = null;
         initialUser.value = {
           name: stored.name?.trim() || '',
-          email: stored.email?.trim() || ''
+          email: stored.email?.trim() || '',
+          password: ''
         };
       }
     }
@@ -84,7 +90,8 @@ const persist = async (credentials) => {
 const handleLogin = async (credentials) => {
   const clean = {
     name: credentials.name.trim(),
-    email: credentials.email.trim()
+    email: credentials.email.trim(),
+    password: credentials.password || ''
   };
   await persist(clean);
   user.value = clean;
@@ -92,7 +99,7 @@ const handleLogin = async (credentials) => {
 
 const handleLogout = async () => {
   user.value = null;
-  initialUser.value = { name: '', email: '' };
+  initialUser.value = { name: '', email: '', password: '' };
   await clearCredentials();
 };
 </script>

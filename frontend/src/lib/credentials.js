@@ -1,5 +1,6 @@
-// Stockage local des informations de l'étudiant (Nom et E-mail).
-// Aucun mot de passe n'est requis ni stocké.
+// Stockage local des identifiants de l'étudiant (Nom, E-mail, Mot de passe).
+// Le mot de passe et les données sont chiffrés en AES-GCM 256 bits.
+// La clé est non-exportable et vit dans IndexedDB ; le localStorage ne contient que du chiffré.
 
 const DB_NAME = 'presence-esisar';
 const STORE = 'keys';
@@ -27,61 +28,85 @@ const withStore = async (mode, action) => {
   }
 };
 
+const getKey = async () => {
+  const existing = await withStore('readonly', (store) => store.get(KEY_ID));
+  if (existing) return existing;
+  const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  await withStore('readwrite', (store) => store.put(key, KEY_ID));
+  return key;
+};
+
+const toBase64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
 const fromBase64 = (text) => Uint8Array.from(atob(text), (char) => char.charCodeAt(0));
 
-const tryMigrateLegacy = async (raw) => {
+export const canPersist = () =>
+  Boolean((typeof localStorage !== 'undefined' && globalThis.crypto?.subtle && globalThis.indexedDB) || typeof localStorage !== 'undefined');
+
+export const saveCredentials = async (user) => {
+  const clean = {
+    name: typeof user.name === 'string' ? user.name.trim() : '',
+    email: typeof user.email === 'string' ? user.email.trim() : '',
+    password: typeof user.password === 'string' ? user.password : ''
+  };
+
+  if (globalThis.crypto?.subtle && globalThis.indexedDB) {
+    const key = await getKey();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const data = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      key,
+      new TextEncoder().encode(JSON.stringify(clean))
+    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: 2, iv: toBase64(iv), data: toBase64(data) }));
+  } else {
+    // Mode dégradé ou tests unitaires sans IndexedDB
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+  }
+};
+
+/**
+ * Retourne l'utilisateur mémorisé ou null si aucun profil valide.
+ * Supporte le déchiffrement v2 et la migration douce depuis les versions précédentes.
+ */
+export const loadCredentials = async () => {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+
   try {
     const parsed = JSON.parse(raw);
-    // Format moderne (clair) : { name, email }
-    if (parsed && typeof parsed === 'object' && ('name' in parsed || 'email' in parsed)) {
-      return {
-        name: typeof parsed.name === 'string' ? parsed.name.trim() : '',
-        email: typeof parsed.email === 'string' ? parsed.email.trim() : ''
-      };
-    }
-    // Ancien format chiffré v2 : { v: 2, iv, data }
-    if (parsed?.v === 2 && parsed.iv && parsed.data && globalThis.crypto?.subtle && globalThis.indexedDB) {
-      const key = await withStore('readonly', (store) => store.get(KEY_ID));
-      if (key) {
+
+    // Format chiffré v2 AES-GCM
+    if (parsed?.v === 2 && parsed.iv && parsed.data) {
+      if (globalThis.crypto?.subtle && globalThis.indexedDB) {
+        const key = await getKey();
         const plain = await crypto.subtle.decrypt(
           { name: 'AES-GCM', iv: fromBase64(parsed.iv) },
           key,
           fromBase64(parsed.data)
         );
-        const legacy = JSON.parse(new TextDecoder().decode(plain));
-        const migrated = {
-          name: typeof legacy.name === 'string' ? legacy.name.trim() : '',
-          email: typeof legacy.email === 'string' ? legacy.email.trim() : ''
+        const decrypted = JSON.parse(new TextDecoder().decode(plain));
+        return {
+          name: typeof decrypted.name === 'string' ? decrypted.name.trim() : '',
+          email: typeof decrypted.email === 'string' ? decrypted.email.trim() : '',
+          password: typeof decrypted.password === 'string' ? decrypted.password : ''
         };
-        // Sauvegarde immédiate au format clair (sans mot de passe)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-        // Nettoyage de l'ancienne clé IndexedDB
-        try {
-          await withStore('readwrite', (store) => store.delete(KEY_ID));
-        } catch {}
-        return migrated;
       }
+      return null;
     }
-  } catch (e) {
-    console.warn('Impossible de lire les identifiants précédents:', e);
+
+    // Migration depuis la version intermédiaire (nom et e-mail sans mot de passe)
+    if (parsed && typeof parsed === 'object' && ('name' in parsed || 'email' in parsed)) {
+      return {
+        name: typeof parsed.name === 'string' ? parsed.name.trim() : '',
+        email: typeof parsed.email === 'string' ? parsed.email.trim() : '',
+        password: typeof parsed.password === 'string' ? parsed.password : ''
+      };
+    }
+  } catch (error) {
+    console.warn('Impossible de charger les identifiants stockés :', error);
+    await clearCredentials();
   }
   return null;
-};
-
-export const canPersist = () => typeof localStorage !== 'undefined';
-
-export const saveCredentials = async (user) => {
-  const data = {
-    name: typeof user.name === 'string' ? user.name.trim() : '',
-    email: typeof user.email === 'string' ? user.email.trim() : ''
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
-
-export const loadCredentials = async () => {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  return await tryMigrateLegacy(raw);
 };
 
 export const clearCredentials = async () => {

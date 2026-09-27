@@ -2,20 +2,17 @@ name: presence-esisar
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-}
     image: presence-esisar:latest
     restart: unless-stopped
     environment:
       RECIPIENT_EMAIL: ${RECIPIENT_EMAIL:-apprentissage@esisar.grenoble-inp.fr}
       MAIL_SUBJECT: ${MAIL_SUBJECT:-feuille de présence - 5App}
-      SMTP_ENABLED: ${SMTP_ENABLED:-true}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-presence@esisar.grenoble-inp.fr}
-      SMTP_HOST: ${SMTP_HOST:-smtps.esisar.grenoble-inp.fr}
-      SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_SECURE: ${SMTP_SECURE:-}
-      SMTP_TLS_REJECT_UNAUTHORIZED: ${SMTP_TLS_REJECT_UNAUTHORIZED:-true}
+      DIRECT_SEND_ENABLED: ${DIRECT_SEND_ENABLED:-${SMTP_ENABLED:-true}}
+      ZIMBRA_URL: ${ZIMBRA_URL:-https://mail-etu.esisar.grenoble-inp.fr}
       # Proxys devant l'app : nginx puis Caddy
       TRUST_PROXY: 2
     read_only: true

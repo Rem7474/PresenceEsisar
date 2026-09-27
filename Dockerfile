@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
 FROM node:24-alpine AS frontend-build
+ARG APP_VERSION
+ENV APP_VERSION=$APP_VERSION
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts

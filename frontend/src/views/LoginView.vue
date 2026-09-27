@@ -10,7 +10,8 @@
       <h2>{{ isCompletingProfile ? 'Complétez votre profil' : 'Première connexion' }}</h2>
 
       <p v-if="isCompletingProfile" class="notice-info">
-        Renseignez votre adresse e-mail afin de recevoir automatiquement une copie de vos attestations envoyées.
+        La scolarité exige que chaque communication provienne de votre messagerie étudiante.
+        Renseignez le mot de passe de votre messagerie pour activer l'envoi direct.
       </p>
 
       <div class="field">
@@ -27,24 +28,48 @@
       </div>
 
       <div class="field">
-        <label for="email">Adresse e-mail</label>
+        <label for="email">Adresse e-mail étudiante</label>
         <input
           id="email"
           v-model.trim="form.email"
           type="email"
           inputmode="email"
-          placeholder="prenom.nom@grenoble-inp.org"
+          placeholder="prenom.nom@etu.esisar.grenoble-inp.fr"
           autocomplete="email"
           autocapitalize="none"
           maxlength="254"
           required
         >
-        <span class="hint">Une copie de l'attestation vous sera transmise à cette adresse.</span>
+        <span class="hint">L'attestation sera expédiée depuis cette adresse officielle.</span>
+      </div>
+
+      <div v-if="smtpEnabled" class="field">
+        <label for="password">Mot de passe messagerie étudiante</label>
+        <div class="password-wrap">
+          <input
+            id="password"
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            placeholder="Mot de passe de votre compte Zimbra"
+            autocomplete="current-password"
+            maxlength="256"
+            :required="smtpEnabled"
+          >
+          <button
+            type="button"
+            class="toggle-password"
+            :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+            @click="showPassword = !showPassword"
+          >
+            <AppIcon :name="showPassword ? 'eye-off' : 'eye'" />
+          </button>
+        </div>
+        <span class="hint">Requis pour vous authentifier auprès du serveur Zimbra de l'école.</span>
       </div>
 
       <p class="privacy">
         <AppIcon name="lock" :size="16" />
-        <span>Mémorisé uniquement sur cet appareil.</span>
+        <span>Chiffré localement (AES-256) et mémorisé uniquement sur cet appareil.</span>
       </p>
 
       <button type="submit" class="btn btn-primary">Continuer</button>
@@ -53,34 +78,44 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import AppIcon from '../components/AppIcon.vue';
 
 const props = defineProps({
   smtpEnabled: { type: Boolean, default: true },
-  initialUser: { type: Object, default: () => ({ name: '', email: '' }) }
+  initialUser: { type: Object, default: () => ({ name: '', email: '', password: '' }) }
 });
 const emit = defineEmits(['login']);
 
 const form = reactive({
   name: props.initialUser?.name || '',
-  email: props.initialUser?.email || ''
+  email: props.initialUser?.email || '',
+  password: props.initialUser?.password || ''
 });
+const showPassword = ref(false);
 
 watch(
   () => props.initialUser,
   (val) => {
     if (val?.name && !form.name) form.name = val.name;
     if (val?.email && !form.email) form.email = val.email;
+    if (val?.password && !form.password) form.password = val.password;
   },
   { deep: true, immediate: true }
 );
 
-const isCompletingProfile = computed(() => Boolean(props.initialUser?.name && !props.initialUser?.email));
+const isCompletingProfile = computed(
+  () => Boolean(props.initialUser?.name && props.initialUser?.email && !props.initialUser?.password)
+);
 
 const handleSubmit = () => {
   if (!form.name || !form.email) return;
-  emit('login', { name: form.name.trim(), email: form.email.trim() });
+  if (props.smtpEnabled && !form.password) return;
+  emit('login', {
+    name: form.name.trim(),
+    email: form.email.trim(),
+    password: form.password
+  });
 };
 </script>
 
@@ -168,6 +203,30 @@ const handleSubmit = () => {
   outline: none;
   background: var(--surface);
   border-color: var(--primary);
+}
+
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 3.25rem;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
 }
 
 .hint {
