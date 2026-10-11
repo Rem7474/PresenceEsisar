@@ -7,6 +7,8 @@ const EXTENSIONS = {
 
 export const ACCEPTED_TYPES = Object.keys(EXTENSIONS);
 export const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Photo brute acceptée avant compression (les appareils récents dépassent facilement 10 Mo).
+export const MAX_RAW_IMAGE_SIZE = 40 * 1024 * 1024;
 
 /** Même nettoyage que le serveur, qui reste l'autorité sur le nom final. */
 const cleanName = (name) =>
