@@ -58,11 +58,11 @@
       <template v-if="!selectedFile">
         <h2>Ajoutez votre feuille</h2>
         <div class="tiles">
-          <button class="tile btn-camera" :disabled="isLoading" @click="cameraInput.click()">
+          <button class="tile btn-camera" :disabled="isLoading || isCompressing" @click="cameraInput.click()">
             <span class="tile-icon"><AppIcon name="camera" :size="26" /></span>
             <span>Prendre une photo</span>
           </button>
-          <button class="tile btn-file" :disabled="isLoading" @click="fileInput.click()">
+          <button class="tile btn-file" :disabled="isLoading || isCompressing" @click="fileInput.click()">
             <span class="tile-icon"><AppIcon name="file" :size="26" /></span>
             <span>Choisir un fichier</span>
           </button>
@@ -159,7 +159,8 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import AppIcon from '../components/AppIcon.vue';
 import { isoWeek } from '../lib/week';
-import { ACCEPTED_TYPES, MAX_FILE_SIZE, buildFilename } from '../lib/filename';
+import { ACCEPTED_TYPES, MAX_FILE_SIZE, MAX_RAW_IMAGE_SIZE, buildFilename } from '../lib/filename';
+import { compressImage } from '../lib/image';
 import { buildBody, buildMailto, buildSubject } from '../lib/mail';
 
 const props = defineProps({
@@ -175,6 +176,7 @@ const fileInput = ref(null);
 const selectedFile = ref(null);
 const previewUrl = ref(null);
 const isLoading = ref(false);
+const isCompressing = ref(false);
 const message = ref('');
 const messageType = ref('');
 
@@ -229,22 +231,31 @@ const resetSelection = () => {
   fileInput.value.value = '';
 };
 
-const handleFileSelect = (event) => {
+const handleFileSelect = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
+  const isImage = file.type.startsWith('image/');
 
   if (!ACCEPTED_TYPES.includes(file.type)) {
     resetSelection();
     return showMessage('Format non supporté : utilisez une image JPEG, PNG, WebP ou un PDF.', 'error');
   }
-  if (file.size > MAX_FILE_SIZE) {
+  // Les images sont compressées : on tolère une photo brute plus lourde que la limite d'envoi.
+  if (file.size > (isImage ? MAX_RAW_IMAGE_SIZE : MAX_FILE_SIZE)) {
     resetSelection();
-    return showMessage('Fichier trop volumineux (10 Mo maximum).', 'error');
+    return showMessage('Fichier trop volumineux.', 'error');
   }
 
   resetSelection();
-  selectedFile.value = file;
-  previewUrl.value = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
+  isCompressing.value = true;
+  const prepared = isImage ? await compressImage(file) : file;
+  isCompressing.value = false;
+
+  if (prepared.size > MAX_FILE_SIZE) {
+    return showMessage('Fichier trop volumineux (10 Mo maximum).', 'error');
+  }
+  selectedFile.value = prepared;
+  previewUrl.value = isImage ? URL.createObjectURL(prepared) : null;
 };
 
 const handleSubmit = async () => {
