@@ -125,7 +125,8 @@ test('sendZimbraMail poste le message avec l\'attachement aid', async () => {
   }
 });
 
-test('sendPresenceEmail orchestre le flux complet Zimbra avec succès', async () => {
+const withMockPresenceServer = async (run) => {
+  let sentRecipients = null;
   const mock = await createMockZimbraServer(async (req, res) => {
     if (req.url === '/service/soap') {
       let body = '';
@@ -135,9 +136,10 @@ test('sendPresenceEmail orchestre le flux complet Zimbra avec succès', async ()
         if (parsed.Body.AuthRequest) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
-            Body: { AuthResponse: { authToken: [{ _content: 'token_orchestration' }] } }
+            Body: { AuthResponse: { authToken: [{ _content: 'token_mock' }] } }
           }));
         } else if (parsed.Body.SendMsgRequest) {
+          sentRecipients = parsed.Body.SendMsgRequest.m.e;
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             Body: { SendMsgResponse: { m: [{ id: 'ok_msg' }] } }
@@ -146,11 +148,19 @@ test('sendPresenceEmail orchestre le flux complet Zimbra avec succès', async ()
       });
     } else if (req.url.startsWith('/service/upload')) {
       res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end("200,'0','orchestrated_aid_xyz'");
+      res.end("200,'0','aid_mock'");
     }
   });
 
   try {
+    await run(mock.url, () => sentRecipients);
+  } finally {
+    await mock.close();
+  }
+};
+
+test('sendPresenceEmail orchestre le flux complet Zimbra avec succès', async () => {
+  await withMockPresenceServer(async (url, getRecipients) => {
     await sendPresenceEmail({
       name: 'Alice Martin',
       email: 'alice@esisar.fr',
@@ -159,9 +169,32 @@ test('sendPresenceEmail orchestre le flux complet Zimbra avec succès', async ()
       subject: 'Feuille de présence',
       content: Buffer.from('%PDF-orchestration'),
       mimeType: 'application/pdf',
-      baseUrl: mock.url
+      baseUrl: url
     });
-  } finally {
-    await mock.close();
-  }
+    assert.deepEqual(getRecipients(), [
+      { t: 't', a: 'apprentissage@esisar.grenoble-inp.fr' },
+      { t: 'c', a: 'alice@esisar.fr' }
+    ]);
+  });
 });
+
+test('sendPresenceEmail n\'ajoute pas de copie quand cc est faux', async () => {
+  await withMockPresenceServer(async (url, getRecipients) => {
+    await sendPresenceEmail({
+      name: 'Alice Martin',
+      email: 'alice@esisar.fr',
+      password: 'password123',
+      filename: 'Attestation.pdf',
+      subject: 'Feuille de présence',
+      content: Buffer.from('%PDF-orchestration'),
+      cc: false,
+      mimeType: 'application/pdf',
+      baseUrl: url
+    });
+    assert.deepEqual(getRecipients(), [
+      { t: 't', a: 'apprentissage@esisar.grenoble-inp.fr' }
+    ]);
+  });
+});
+
+

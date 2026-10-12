@@ -9,7 +9,7 @@ import { MailError, sendPresenceEmail as defaultSend } from './mailer.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: config.maxFileSize, files: 1, fields: 6, fieldSize: 1024 }
+  limits: { fileSize: config.maxFileSize, files: 1, fields: 10, fieldSize: 1024 }
 });
 
 const isBoundedString = (value, max) => typeof value === 'string' && value.length > 0 && value.length <= max;
@@ -60,7 +60,7 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
 
   app.post('/api/upload', requireSmtp, failedAttempts, upload.single('file'), async (req, res, next) => {
     try {
-      const { name, email, password, week: rawWeek } = req.body;
+      const { name, email, password, week: rawWeek, cc } = req.body;
       const week = Number(rawWeek);
 
       if (!req.file) return res.status(400).json({ error: 'Aucun fichier fourni.' });
@@ -75,6 +75,7 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
 
       const filename = buildFilename(cleanName, week, type.ext);
       const subject = config.mailSubject;
+      const shouldCc = cc === undefined ? true : cc === 'true' || cc === true || cc === '1';
 
       await sendPresenceEmail({
         name: cleanName,
@@ -83,7 +84,8 @@ export const createApp = ({ sendPresenceEmail = defaultSend, smtpEnabled = confi
         filename,
         subject,
         content: req.file.buffer,
-        mimeType: type.mime
+        mimeType: type.mime,
+        cc: shouldCc
       });
 
       res.set('Cache-Control', 'no-store').json({ success: true });

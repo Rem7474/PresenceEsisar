@@ -126,6 +126,26 @@
           <code>{{ recipient }}</code>
         </div>
       </div>
+
+      <div class="switch-container">
+        <label class="switch-row" for="cc-switch">
+          <div class="switch-info">
+            <span class="switch-title">Se mettre en copie</span>
+            <span class="switch-desc">Recevoir un double sur {{ user.email || 'votre boîte étudiante' }}</span>
+          </div>
+          <div class="switch-control">
+            <input
+              id="cc-switch"
+              v-model="sendCopy"
+              type="checkbox"
+              role="switch"
+              :aria-checked="sendCopy"
+              class="switch-input"
+            >
+            <span class="switch-slider" aria-hidden="true" />
+          </div>
+        </label>
+      </div>
     </section>
 
     <div class="action-bar">
@@ -156,7 +176,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from '../components/AppIcon.vue';
 import { isoWeek } from '../lib/week';
 import { ACCEPTED_TYPES, MAX_FILE_SIZE, MAX_RAW_IMAGE_SIZE, buildFilename } from '../lib/filename';
@@ -170,6 +190,22 @@ const props = defineProps({
   subject: { type: String, default: '' }
 });
 defineEmits(['logout']);
+
+const loadCcPreference = () => {
+  try {
+    const saved = localStorage.getItem('presenceCc');
+    if (saved !== null) return saved === 'true';
+  } catch {}
+  return true;
+};
+
+const sendCopy = ref(loadCcPreference());
+
+watch(sendCopy, (val) => {
+  try {
+    localStorage.setItem('presenceCc', String(val));
+  } catch {}
+});
 
 const cameraInput = ref(null);
 const fileInput = ref(null);
@@ -271,6 +307,7 @@ const handleSubmit = async () => {
     body.append('email', props.user.email);
     body.append('password', props.user.password || '');
     body.append('week', String(selectedWeek.value));
+    body.append('cc', String(sendCopy.value));
 
     const response = await fetch('/api/upload', { method: 'POST', body });
     const result = await response.json().catch(() => ({}));
@@ -332,7 +369,12 @@ const handleExternalMail = async () => {
   }
 
   downloadFile(file);
-  window.location.href = buildMailto(props.recipient, subject, buildBody(generatedFilename.value));
+  window.location.href = buildMailto(
+    props.recipient,
+    subject,
+    buildBody(generatedFilename.value),
+    sendCopy.value ? props.user.email : undefined
+  );
   showMessage('Fichier téléchargé : joignez-le au mail qui vient de s\'ouvrir.', 'success');
 };
 
@@ -623,6 +665,96 @@ onBeforeUnmount(() => {
 .filename-box code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8rem;
+}
+
+.switch-container {
+  padding-top: 0.5rem;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.switch-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.switch-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.switch-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.switch-control {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switch-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--border);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.switch-slider::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.switch-input:checked + .switch-slider {
+  background-color: var(--primary);
+}
+
+.switch-input:checked + .switch-slider::before {
+  transform: translateX(20px);
+}
+
+.switch-input:focus-visible + .switch-slider {
+  outline: 3px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline-offset: 2px;
 }
 
 /* Barre d'actions fixe en bas, comme une app native */

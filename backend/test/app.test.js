@@ -35,7 +35,19 @@ test('envoie le fichier renommé avec nom, e-mail et mot de passe fournis', asyn
   assert.equal(calls[0].email, 'jean@esisar.fr');
   assert.equal(calls[0].password, 'secret');
   assert.equal(calls[0].subject, 'feuille de présence - 5App');
+  assert.equal(calls[0].cc, true);
 });
+
+test('respecte le paramètre cc lorsqu\'il est désactivé', async () => {
+  const calls = [];
+  await withServer(async (mail) => calls.push(mail), async (url) => {
+    const res = await fetch(`${url}/api/upload`, { method: 'POST', body: form({ cc: 'false' }) });
+    assert.equal(res.status, 200);
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].cc, false);
+});
+
 
 test('rejette les requêtes invalides sans appeler le service de messagerie', async () => {
   let called = false;

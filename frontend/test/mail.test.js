@@ -14,4 +14,15 @@ test('buildMailto encode destinataire, objet et corps', () => {
   assert.equal(url.searchParams.get('subject'), 'feuille de présence - 5App');
   assert.equal(url.searchParams.get('body'), buildBody('scan.pdf'));
   assert.ok(!url.searchParams.get('body').includes('Destinataire'));
+  assert.equal(url.searchParams.get('cc'), null);
 });
+
+test('buildMailto encode avec ou sans cc', () => {
+  const withCc = new URL(buildMailto('dest@esisar.fr', 'Sujet', 'Corps', 'etudiant@esisar.fr'));
+  assert.equal(withCc.searchParams.get('cc'), 'etudiant@esisar.fr');
+  assert.equal(withCc.searchParams.get('subject'), 'Sujet');
+
+  const withoutCc = new URL(buildMailto('dest@esisar.fr', 'Sujet', 'Corps', undefined));
+  assert.equal(withoutCc.searchParams.get('cc'), null);
+});
+
