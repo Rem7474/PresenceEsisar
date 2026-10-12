@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-alpine AS frontend-build
+FROM node:26-alpine AS frontend-build
 ARG APP_VERSION
 ENV APP_VERSION=$APP_VERSION
 WORKDIR /build
@@ -9,12 +9,12 @@ RUN npm ci --ignore-scripts
 COPY frontend/ ./
 RUN npm run build
 
-FROM node:24-alpine AS backend-deps
+FROM node:26-alpine AS backend-deps
 WORKDIR /app
 COPY backend/package.json backend/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-FROM node:24-alpine
+FROM node:26-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=backend-deps --chown=node:node /app/node_modules ./node_modules
