@@ -55,6 +55,8 @@ git push --tags
 docker compose up -d --build
 ```
 
+Le push d'un tag `vX.Y.Z` déclenche le workflow `Release` : tests, publication de l'image `ghcr.io/rem7474/presence-esisar` (tags `X.Y.Z`, `X.Y`, `latest`) et création de la release GitHub avec notes générées.
+
 Dès le déploiement :
 - La navigation étant en **Network-First**, les clients connectés récupèrent immédiatement la nouvelle version de l'application.
 - Le Service Worker détecte le changement de version, active le nouveau cache (`skipWaiting`), supprime automatiquement l'ancien cache (`activate`) et prend le relais (`clients.claim`).
@@ -74,6 +76,7 @@ navigateur ──HTTPS──> nginx (public) ──HTTPS auto-signé──> cadd
 backend/    API Express (server.js, src/app.js, zimbra.js, attachment.js) + tests
 frontend/   PWA Vue 3 / Vite (src/, public/ : manifest, service worker, icônes) + tests
 Dockerfile, docker-compose.yml, Caddyfile, .env.example
+.github/    CI (tests, build, Docker), release GHCR, CodeQL, Dependabot
 ```
 
 ## Sécurité
