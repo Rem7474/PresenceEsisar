@@ -209,6 +209,7 @@ export const sendPresenceEmail = async ({
   filename,
   subject,
   content,
+  cc = true,
   mimeType = 'application/pdf',
   baseUrl = config.zimbra.url
 }) => {
@@ -234,7 +235,7 @@ export const sendPresenceEmail = async ({
   // 3. Expédition du mail
   await sendZimbraMail(authToken, {
     to: config.recipient,
-    cc: email,
+    cc: cc ? (typeof cc === 'string' ? cc : email) : undefined,
     subject: mailSubject,
     bodyText,
     aid,

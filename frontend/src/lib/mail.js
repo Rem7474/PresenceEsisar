@@ -10,5 +10,11 @@ export const buildBody = (filename) => {
 };
 
 /** Lien mailto: (ne peut pas contenir de pièce jointe). */
-export const buildMailto = (recipient, subject, body) =>
-  `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+export const buildMailto = (recipient, subject, body, cc) => {
+  const query = [
+    cc ? `cc=${encodeURIComponent(cc)}` : '',
+    `subject=${encodeURIComponent(subject)}`,
+    `body=${encodeURIComponent(body)}`
+  ].filter(Boolean).join('&');
+  return `mailto:${encodeURIComponent(recipient)}?${query}`;
+};
